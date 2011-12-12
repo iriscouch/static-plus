@@ -16,7 +16,7 @@ Install it from NPM
 
 Point it at a CouchDB database
 
-    static_plus http://me:secret@example.iriscouch.com/my_db
+    static+ http://me:secret@example.iriscouch.com/my_db
 
 ## License
 

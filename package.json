@@ -20,5 +20,6 @@
                      }
 
 , "main": "./api"
-, "bin" : "./cli.js"
+, "bin" : { "static+": "./cli.js"
+          }
 }
