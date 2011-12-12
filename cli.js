@@ -1,4 +1,6 @@
-// The Static Plus API
+#!/usr/bin/env node
+
+// The Static Plus command-line tool
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-require('defaultable').def(module,
-  {
-  }, function(module, exports, DEFS, require) {
+var sp = require('./api')
+  , lib = require('./lib').defaults({ 'args': ['database url']
+                                    })
 
+if(require.main === module)
+  main.apply(null, lib.argv._);
 
-module.exports = {
-                 }
-
-
-}) // defaultable
+function main(url) {
+  console.log('hello, world: ' + url);
+}
