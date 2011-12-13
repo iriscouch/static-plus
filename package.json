@@ -11,7 +11,7 @@
 
 , "dependencies"   : { "follow"  : "0.4.1"
                      , "kanso"   : "0.1.2-npm1"
-                     , "request" : "2.2.9"
+                     , "request" : "~2.2.9"
                      , "optimist": "0.3.0"
                      , "defaultable": "0.7.2"
                      }
