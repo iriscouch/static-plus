@@ -81,13 +81,17 @@ test('Build output', function(t) {
 
     t.doesNotThrow(function() { builder.start() }, 'No problem starting this builder')
 
-    var deploys = 0
-    builder.on('deploy', function() { deploys += 1 })
+    var deploy = null
+    builder.on('deploy', function(output) { deploy = output })
 
     setTimeout(check_deploys, couch.rtt() * 2)
     function check_deploys() {
-      t.equals(deploys, 1, 'One deploy should have happened since the DB had one document')
       t.doesNotThrow(function() { builder.stop() })
+
+      t.ok(deploy, 'One deploy should have happened since the DB had one document')
+      t.ok(deploy.doc_1, 'The document was deployed')
+      t.equal(deploy.doc_1, 'doc_1 says foo', 'Deployed "page" matches the template')
+
       t.end()
     }
   })
