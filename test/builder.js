@@ -3,11 +3,13 @@ var tap = require('tap')
   , request = require('request')
 
 var api = require('../api')
+  , couch = require('./couch')
 
-var DB = 'http://localhost:5984/test_static_plus'
-
+couch.setup(test)
 
 test('Builder API', function(t) {
+  t.ok(couch.rtt(), 'The request duration should be known')
+
   var builder;
 
   t.doesNotThrow(function() { builder = new api.Builder }, 'Create a new builder')
@@ -36,26 +38,10 @@ test('Builder API', function(t) {
   builder.source = 'not_a_url'
   t.throws(start, 'Throw for bad Couch URL')
 
-  var http_begin = new Date;
-  request({method:'DELETE', json:true, uri:DB}, function(er, res) {
-    if(er) throw er;
-    if(res.error && res.error != 'not_found')
-      throw new Error('Failed to delete test DB: ' + JSON.stringify(res.body))
+  builder.source = couch.DB
+  t.doesNotThrow(start, 'No throw for all good starting data')
 
-    request({method:'PUT', json:true, uri:DB}, function(er, res) {
-      if(er) throw er;
-      if(res.error && res.error != 'file_exists')
-        throw new Error('Failed to create test DB: ' + JSON.stringify(res.body))
-
-      var http_end = new Date
-        , http_duration = http_end - http_begin
-
-      builder.source = DB
-      t.doesNotThrow(start, 'No throw for all good starting data')
-
-      setTimeout(check_events, http_duration * 1.5)
-    })
-  })
+  setTimeout(check_events, couch.rtt() * 1.5)
 
   function check_events() {
     t.ok(did.output, 'The output event finally fired')
@@ -63,6 +49,32 @@ test('Builder API', function(t) {
     t.ok(did.source, 'The source event finally fired')
     t.ok(did.start, 'The builder started')
 
+    t.ok(builder.feed, 'The builder should have a feed by now')
+    builder.feed.die()
+
     t.end()
   }
+})
+
+
+test('Build output', function(t) {
+  t.ok(couch.rtt(), 'The request duration should be known')
+
+  couch.add_doc('foo', function() {
+    var builder = new api.Builder('Build output')
+
+    builder.source   = couch.DB
+    builder.output   = {}
+    builder.template = function(doc) { return doc._id + ' says ' + doc.value }
+
+    var pages = 0;
+    builder.on('page', function(page) {
+      pages += 1
+      t.equals(Object.keys(builder.output).length, pages, 'Should have '+pages+' pages built now')
+    })
+
+    t.doesNotThrow(function() { builder.start() }, 'No problem starting this builder')
+    builder.stop()
+    t.end()
+  })
 })
