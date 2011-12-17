@@ -89,8 +89,8 @@ function add_doc(id, value, callback) {
     , req = { method:'POST', uri:DB, json:doc }
 
   request(req, function(er, res) {
-    t.notOk(er, 'No problem adding doc: ' + doc._id)
-    t.equal(res.statusCode, 201, 'Correct HTTP response creating doc: ' + doc._id)
+    assert.ok(!er, 'No problem adding doc: ' + doc._id)
+    assert.equal(res.statusCode, 201, 'Correct HTTP response creating doc: ' + doc._id)
     callback()
   })
 }
