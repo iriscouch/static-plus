@@ -5,6 +5,7 @@ var fs = require('fs')
 
 var api = require('../api')
   , couch = require('./couch')
+  , auto = api.defaults({ autostart:true, autostop:true, source:couch.DB })
 
 couch.setup(test)
 
@@ -92,6 +93,25 @@ test('Autostop', function(t) {
     t.ok(stopped, 'The builder should have stopped by now')
     t.ok(builder.dead, 'The builder should be dead')
     t.ok(builder.feed.dead, "The builder's feed should be dead")
+    t.end()
+  }
+})
+
+test('Couch output', function(t) {
+  function just_val(doc) { return "" + doc.value }
+
+  var couch_url = new auto.Builder({ 'template':just_val, 'output':require('path').dirname(couch.DB) })
+  var couch_db  = new auto.Builder({ 'template':just_val, 'output':couch.DB })
+
+  var errors = { 'url':null, 'db':null }
+  couch_url.on('error', function(er) { errors.url = er })
+  couch_db.on('error', function(er) { errors.db = er })
+
+  setTimeout(check_errors, couch.rtt() * 2)
+  function check_errors() {
+    t.ok(errors.url, 'A couch URL causes an error')
+    t.ok(errors.db, 'A couch DB URL causes an error')
+
     t.end()
   }
 })
