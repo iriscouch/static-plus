@@ -82,3 +82,21 @@ test('Autostart', function(t) {
     t.end()
   }
 })
+
+test('Autostop', function(t) {
+  var builder = new api.Builder({ autostart:true, autostop:true })
+  builder.source = couch.DB
+  builder.output = {}
+  builder.template = function() { return 'I autostop' }
+
+  var stopped = false
+  builder.on('stop', function() { stopped = true })
+
+  setTimeout(check_for_stop, couch.rtt() * 2)
+  function check_for_stop() {
+    t.ok(stopped, 'The builder should have stopped by now')
+    t.ok(builder.dead, 'The builder should be dead')
+    t.ok(builder.feed.dead, "The builder's feed should be dead")
+    t.end()
+  }
+})
