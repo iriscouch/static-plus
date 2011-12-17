@@ -46,21 +46,22 @@ test('Build to object', function(t) {
 
 test('Build to files', function(t) {
   couch.add_doc('bar', 'camp', function() {
+    var build_dir = __dirname + '/../build_test/files'
+
     var builder = new auto.Builder
     builder.source = couch.DB
-    builder.output = 'files_build'
+    builder.output = build_dir
     builder.template = function(doc) { return doc._id + ': ' + doc.value }
 
     builder.on('deploy', function(path) {
-      t.equal(path, 'files_build', 'Deploy to the same path as instructed')
+      t.equal(path, build_dir, 'Deploy to the same path as instructed')
 
-      var files = process.cwd() + '/files_build'
-      var found = fs.readdirSync(files)
+      var found = fs.readdirSync(build_dir)
       t.ok(~found.indexOf('foo.html'), 'Document "foo" was built as a file')
       t.ok(~found.indexOf('bar.html'), 'Document "bar" was built as a file')
 
-      t.equal(fs.readFileSync(files+'/foo.html', 'utf8'), 'foo: tball', 'File for document "foo" looks good')
-      t.equal(fs.readFileSync(files+'/bar.html', 'utf8'), 'bar: camp', 'File for document "bar" looks good')
+      t.equal(fs.readFileSync(build_dir+'/foo.html', 'utf8'), 'foo: tball', 'File for document "foo" looks good')
+      t.equal(fs.readFileSync(build_dir+'/bar.html', 'utf8'), 'bar: camp', 'File for document "bar" looks good')
 
       t.end()
     })
