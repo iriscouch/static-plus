@@ -69,8 +69,20 @@ function init_db(t, callback) {
       t.false(res.body.error, 'Couch created new test DB: ' + DB)
       t.equal(res.statusCode, 201, 'Couch created the database')
 
-      var rtt = (new Date) - create_begin
-      callback(null, rtt)
+      request.post({uri:DB, agent:false, json:{ _id:'doc_one', value:'one'}}, on_doc)
+      request.post({uri:DB, agent:false, json:{ _id:'doc_two', value:'two'}}, on_doc)
+      request.post({uri:DB, agent:false, json:{ _id:'doc_three', value:'three'}}, on_doc)
+
+      var hits = 0
+      function on_doc(er) {
+        hits += 1
+        t.false(er, 'No problem posting doc ' + hits)
+
+        if(hits == 3) {
+          var rtt = (new Date) - create_begin
+          callback(null, rtt)
+        }
+      }
     })
   })
 }

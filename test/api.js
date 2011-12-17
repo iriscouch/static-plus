@@ -42,12 +42,6 @@ test('Builder API', function(t) {
   builder.source = couch.DB
   t.doesNotThrow(start, 'No throw for all good starting data')
 
-  // XXX: For now, don't worry about the notimplemented error.
-  builder.on('error', function(er) {
-    if(! er.message.match(/not implemented/))
-      throw er
-  })
-
   setTimeout(check_events, couch.rtt() * 1.5)
 
   function check_events() {
