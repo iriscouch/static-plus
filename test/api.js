@@ -32,7 +32,7 @@ test('Builder API', function(t) {
   builder.template = function(doc) { return 'Doc!' }
 
   t.throws(start, 'Throw for missing output')
-  builder.output = __dirname + '/output'
+  builder.output = __dirname + '/../build_test/output'
 
   t.throws(start, 'Throw for missing source db')
 
