@@ -97,21 +97,32 @@ test('Autostop', function(t) {
   }
 })
 
-test('Couch output', function(t) {
-  function just_val(doc) { return "" + doc.value }
+test('Bad couch output', function(t) {
+  var bad_urls = [ [ /ECONNREFUSED/    , 'http://localhost:10' ]
+                 , [ /database URL/    , require('path').dirname(couch.DB) ]
+                 , [ /not a document/  , couch.DB + '/doc_one/attachment'  ]     // These two errors are
+                 , [ /CouchDB database/, couch.DB + '/doc/attachment/too_deep' ] // actually the same one.
+                 ]
 
-  var couch_url = new auto.Builder({ 'template':just_val, 'output':require('path').dirname(couch.DB) })
-  var couch_db  = new auto.Builder({ 'template':just_val, 'output':couch.DB })
+  test_url()
+  function test_url() {
+    var url = bad_urls.shift()
+    if(!url)
+      return t.end()
 
-  var errors = { 'url':null, 'db':null }
-  couch_url.on('error', function(er) { errors.url = er })
-  couch_db.on('error', function(er) { errors.db = er })
+    var message = url[0]
+    url = url[1]
 
-  setTimeout(check_errors, couch.rtt() * 2)
-  function check_errors() {
-    t.ok(errors.url, 'A couch URL causes an error')
-    t.ok(errors.db, 'A couch DB URL causes an error')
+    var error = null
+    var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'output':url })
+    builder.on('error', function(er) { error = er })
 
-    t.end()
+    setTimeout(check_error, couch.rtt())
+    function check_error() {
+      t.ok(error, 'Bad URL should have caused an error: ' + url)
+      t.ok(error.message.match(message), 'Bad url '+url+' caused error: ' + message)
+
+      test_url() // Next one
+    }
   }
 })
