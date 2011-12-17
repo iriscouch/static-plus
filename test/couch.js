@@ -25,6 +25,7 @@ module.exports = { 'DB': DB
                  , 'redo': redo_couch
                  , 'setup': setup_test
                  , 'add_doc': add_doc
+                 , 'simple_tmpl': simple_tmpl
                  }
 
 
@@ -105,6 +106,11 @@ function add_doc(id, value, callback) {
     assert.equal(res.statusCode, 201, 'Correct HTTP response creating doc: ' + doc._id)
     callback()
   })
+}
+
+
+function simple_tmpl(doc) {
+  return doc._id + ' says ' + doc.value
 }
 
 
