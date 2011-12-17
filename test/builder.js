@@ -41,6 +41,12 @@ test('Builder API', function(t) {
   builder.source = couch.DB
   t.doesNotThrow(start, 'No throw for all good starting data')
 
+  // XXX: For now, don't worry about the notimplemented error.
+  builder.on('error', function(er) {
+    if(! er.message.match(/not implemented/))
+      throw er
+  })
+
   setTimeout(check_events, couch.rtt() * 1.5)
 
   function check_events() {
@@ -50,8 +56,8 @@ test('Builder API', function(t) {
     t.ok(did.start, 'The builder started')
 
     t.ok(builder.feed, 'The builder should have a feed by now')
-    builder.feed.die()
 
+    builder.stop()
     t.end()
   }
 })
@@ -74,7 +80,15 @@ test('Build output', function(t) {
     })
 
     t.doesNotThrow(function() { builder.start() }, 'No problem starting this builder')
-    builder.stop()
-    t.end()
+
+    var deploys = 0
+    builder.on('deploy', function() { deploys += 1 })
+
+    setTimeout(check_deploys, couch.rtt() * 2)
+    function check_deploys() {
+      t.equals(deploys, 1, 'One deploy should have happened since the DB had one document')
+      t.doesNotThrow(function() { builder.stop() })
+      t.end()
+    }
   })
 })
