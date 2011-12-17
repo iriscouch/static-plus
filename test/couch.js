@@ -25,6 +25,7 @@ module.exports = { 'DB': DB
                  , 'redo': redo_couch
                  , 'setup': setup_test
                  , 'add_doc': add_doc
+                 , 'just_value' : just_value
                  , 'simple_tmpl': simple_tmpl
                  }
 
@@ -109,9 +110,8 @@ function add_doc(id, value, callback) {
 }
 
 
-function simple_tmpl(doc) {
-  return doc._id + ' says ' + doc.value
-}
+function simple_tmpl(doc) { return doc._id + ' says ' + doc.value }
+function just_value(doc) { return "" + doc.value }
 
 
 if(require.main === module)
