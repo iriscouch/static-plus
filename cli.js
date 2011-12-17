@@ -14,13 +14,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var sp = require('./api')
-  , lib = require('./lib').defaults({ 'args': ['database url']
+var fs = require('fs')
+  , util = require('util')
+
+var sp = require('./api').defaults({ 'autostart': true })
+  , lib = require('./lib').defaults({ 'args': ['couch db']
+                                    , 'describe': { 'template': 'Path to template file'
+                                                  }
                                     })
 
 if(require.main === module)
   main.apply(null, lib.argv._);
 
 function main(url) {
-  console.log('hello, world: ' + url);
+  var site = new sp.Builder;
+
+  site.template = lib.argv.template || json_page
+  site.target = 'site';
+}
+
+function json_page(doc) {
+  return [ '<!DOCTYPE html>'
+         , '<html>'
+         , '<head><title>' + doc._id + '</title></head>'
+         , '<body>'
+         , '<pre><code>' + util.inspect(doc, false, 50) + '</code></pre>'
+         , '</body>'
+         , '</html>
+         ].join('')
 }
