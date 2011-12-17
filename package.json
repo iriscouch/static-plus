@@ -9,7 +9,7 @@
                 , "url": "git://github.com/iriscouch/static_plus" }
 , "engines": [ "node" ]
 
-, "dependencies"   : { "follow"  : "~0.6.0"
+, "dependencies"   : { "follow"  : "~0.6.1"
                      , "rimraf"  : "~1.0.9"
                      , "kanso"   : "0.1.2-npm1"
                      , "request" : "~2.2.9"
