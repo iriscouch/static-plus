@@ -126,3 +126,22 @@ test('Bad couch output', function(t) {
     }
   }
 })
+
+test('Good couch output', function(t) {
+  var doc_url = couch.DB + '/output'
+  var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'output':doc_url })
+
+  var error = null
+    , done = false
+  builder.on('error', function(er) { error = er })
+  builder.on('stop', function() { done = true })
+
+  setTimeout(check_result, couch.rtt() * 2)
+  function check_result() {
+    return t.end()
+    t.false(error, 'No errors for good doc url: ' + doc_url)
+    t.ok(done, 'Builder finished with good doc_url')
+
+    t.end()
+  }
+})

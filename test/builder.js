@@ -56,3 +56,8 @@ test('Build to files', function(t) {
     })
   })
 })
+
+test('Build to couch', function(t) {
+  // TODO
+  t.end()
+})
