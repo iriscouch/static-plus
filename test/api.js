@@ -31,15 +31,16 @@ test('Builder API', function(t) {
   t.throws(start, 'Throw for bad template type')
   builder.template = function(doc) { return 'Doc!' }
 
-  t.throws(start, 'Throw for missing output')
-  builder.output = __dirname + '/../build_test/output'
-
   t.throws(start, 'Throw for missing source db')
 
   builder.source = 'not_a_url'
   t.throws(start, 'Throw for bad Couch URL')
 
   builder.source = couch.DB
+
+  t.throws(start, 'Throw for missing output')
+  builder.output = __dirname + '/../build_test/output'
+
   t.doesNotThrow(start, 'No throw for all good starting data')
 
   setTimeout(check_events, couch.rtt() * 1.5)
