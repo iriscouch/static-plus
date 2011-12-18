@@ -10,8 +10,6 @@ Yes.
 
 ## Usage
 
-**Static+ is currently vaporware.**
-
 Install it from NPM
 
     npm install -g static-plus
@@ -22,7 +20,7 @@ Point it at a CouchDB database
 
 ## Roadmap
 
-Static+ is an evented (maybe streaming) API and a thin command-line wrapper. It does three things:
+Static+ is an evented API and a command-line tool. It does three things:
 
 1. Let you drop in some templates, point it at a changes feed, and it spits out web pages.
 2. Deploy those web pages to places. Goals, in order:
