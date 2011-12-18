@@ -64,6 +64,24 @@ test('Builder API', function(t) {
   }
 })
 
+test('Manually add a page', function(t) {
+  var builder = new api.Builder({ 'source':couch.DB, output:{} })
+
+  var pages = {}
+  builder.on('page', function(page) { pages[page.id] = page })
+
+  builder.page('', 'Blank page') // By parameters
+  builder.page({'id':'stuff', 'content':'A page with stuff'}) // By object
+
+  t.equal(Object.keys(pages).length, 2, 'Two pages emitted')
+  t.equal(pages[''].id, '', 'Got the blank page by id')
+  t.equal(pages[''].content, 'Blank page', 'Got the blank page content')
+  t.equal(pages.stuff.id, 'stuff', 'Got the stuff page by id')
+  t.equal(pages.stuff.content, 'A page with stuff', 'Got the stuff page content')
+
+  t.end()
+})
+
 test('Autostart', function(t) {
   var builder = new api.Builder({ name:'Autostart', autostart:true })
   builder.source = couch.DB
