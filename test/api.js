@@ -9,6 +9,11 @@ var api = require('../api')
 
 couch.setup(test)
 
+test('Builder includes the Handlebars API', function(t) {
+  t.type(api.handlebars, 'object', 'The builder API includes handlebars')
+  t.end()
+})
+
 test('Builder API', function(t) {
   t.ok(couch.rtt(), 'The request duration should be known')
 

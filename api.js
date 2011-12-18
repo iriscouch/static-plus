@@ -17,7 +17,8 @@ require('defaultable').def(module,
   }, function(module, exports, DEFS, require) {
 
 
-module.exports = { 'Builder': require('./lib/builder')
+module.exports = { 'Builder'   : require('./lib/builder')
+                 , 'handlebars': require('handlebars')
                  }
 
 
