@@ -13,6 +13,7 @@
                      , "rimraf"  : "~1.0.9"
                      , "kanso"   : "0.1.2-npm"
                      , "request" : "~2.2.9"
+                     , "fixed-event": "~0.2.0"
                      , "handlebars": "1.0.2beta"
                      , "winston" : "~0.5.9"
                      , "optimist": "0.3.0"
