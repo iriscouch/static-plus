@@ -14,13 +14,13 @@ test('Build to object', function(t) {
   t.ok(couch.rtt(), 'The request duration should be known')
 
   couch.add_doc('foo', 'tball', function() {
-    var builder = new auto.Builder({ 'output':{} })
+    var builder = new auto.Builder({ 'target':{} })
 
     var pages = 0;
     builder.on('page', function(page) {
       pages += 1
-      console.error(util.inspect(builder.output))
-      t.equals(Object.keys(builder.output).length, pages, 'Should have '+pages+' pages built now')
+      //console.error(util.inspect(builder.target))
+      t.equals(Object.keys(builder.target).length, pages, 'Should have '+pages+' pages built now')
     })
 
     var deploy = null
@@ -41,7 +41,7 @@ test('Build to files', function(t) {
   couch.add_doc('bar', 'camp', function() {
     var build_dir = __dirname + '/../build_test/files'
 
-    var builder = new auto.Builder({ 'output':build_dir })
+    var builder = new auto.Builder({ 'target':build_dir })
     builder.on('deploy', function(path) {
       t.equal(path, build_dir, 'Deploy to the same path as instructed')
 

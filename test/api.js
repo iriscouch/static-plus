@@ -1,6 +1,7 @@
 var fs = require('fs')
   , tap = require('tap')
   , test = tap.test
+  , util = require('util')
   , request = require('request')
 
 var api = require('../api')
@@ -15,47 +16,84 @@ test('Builder includes the Handlebars API', function(t) {
 })
 
 test('Builder API', function(t) {
-  t.ok(couch.rtt(), 'The request duration should be known')
-
   var builder;
-
   t.doesNotThrow(function() { builder = new api.Builder }, 'Create a new builder')
   t.ok(builder, 'Got a builder object')
 
-  function start() { builder.start() }
+  t.end()
+})
 
-  var did = {}
-  builder.on('template', function(template) { did.template = template })
-  builder.on('output'  , function(output)   { did.output   = output   })
-  builder.on('source'  , function(source)   { did.source   = source    })
-  builder.on('start'   , function()         { did.start    = true     })
+test('Builder bad values', function(t) {
+  function tmpl() { return 'A template!' }
 
-  builder.template = null
-  t.throws(start, 'Throw for missing template')
+  var bad_vals = [ {}
+                 , { 'template':null }
+                 , { 'template':1    }
+                 , { 'template':tmpl }
+                 , { 'template':tmpl, 'source':'not_a_url' }
+                 , { 'template':tmpl, 'source':couch.DB }
+                 , { 'template':tmpl, 'source':couch.DB }
+                 , { 'template':tmpl, 'source':couch.DB, 'target':1 }
+                 , { 'template':tmpl, 'source':couch.DB, 'target':[] }
+                 ]
 
-  builder.template = 1;
-  t.throws(start, 'Throw for bad template type')
+  do_vals()
+  function do_vals() {
+    var vals = bad_vals.shift()
+    if(!vals)
+      return t.end()
+
+    var vals_repr = {}
+    Object.keys(vals).forEach(function(key) {
+      vals_repr[key] = vals[key]
+      if(typeof vals_repr[key] == 'function')
+        vals_repr[key] = '<func>'
+    })
+    vals_repr = JSON.stringify(vals_repr)
+
+    var builder = new api.Builder
+    Object.keys(vals).forEach(function(key) {
+      builder[key] = vals[key]
+    })
+
+    var fetched = false
+    builder.on('fetch', function() { fetched = true })
+    //builder.on('error', function(er) { console.error('=-=-=-=-=\n'+er.stack+'\n=-=-=-='); throw er })
+
+    t.throws(function() { builder.fetch() }, 'Throw for bad values: ' + vals_repr)
+
+    setTimeout(check_events, couch.rtt() / 2)
+    function check_events() {
+      t.false(fetched, 'No fetch event for bad values: ' + vals_repr)
+      do_vals()
+    }
+  }
+})
+
+test('Builder basic run', function(t) {
+  t.ok(couch.rtt(), 'The request duration should be known')
+
+  var builder = new api.Builder
+
+  var events = {}
+  builder.on('template', function(template) { events.template = template })
+  builder.on('target'  , function(target)   { events.target   = target   })
+  builder.on('source'  , function(source)   { events.source   = source    })
+  builder.on('fetch'   , function()         { events.fetch    = true     })
+  //builder.on('error'   , function(er) { throw er })
+
   builder.template = function(doc) { return 'Doc!' }
-
-  t.throws(start, 'Throw for missing source db')
-
-  builder.source = 'not_a_url'
-  t.throws(start, 'Throw for bad Couch URL')
-
   builder.source = couch.DB
+  builder.target = __dirname + '/../build_test/target'
 
-  t.throws(start, 'Throw for missing output')
-  builder.output = __dirname + '/../build_test/output'
+  t.doesNotThrow(function() { builder.fetch() }, 'No throw for all good starting data')
 
-  t.doesNotThrow(start, 'No throw for all good starting data')
-
-  setTimeout(check_events, couch.rtt() * 1.5)
-
+  setTimeout(check_events, couch.rtt() * 2)
   function check_events() {
-    t.ok(did.output, 'The output event finally fired')
-    t.ok(did.template, 'The template event finally fired')
-    t.ok(did.source, 'The source event finally fired')
-    t.ok(did.start, 'The builder started')
+    t.ok(events.target, 'The target event finally fired')
+    t.ok(events.template, 'The template event finally fired')
+    t.ok(events.source, 'The source event finally fired')
+    t.ok(events.fetch, 'The builder started fetching')
 
     t.ok(builder.feed, 'The builder should have a feed by now')
 
@@ -65,7 +103,7 @@ test('Builder API', function(t) {
 })
 
 test('Manually add a page', function(t) {
-  var builder = new api.Builder({ 'source':couch.DB, output:{} })
+  var builder = new api.Builder({ 'source':couch.DB, target:{} })
 
   var pages = {}
   builder.on('page', function(page) { pages[page.id] = page })
@@ -85,16 +123,16 @@ test('Manually add a page', function(t) {
 test('Autostart', function(t) {
   var builder = new api.Builder({ name:'Autostart', autostart:true })
   builder.source = couch.DB
-  builder.output = {}
+  builder.target = {}
   builder.template = function() { return 'I autostarted!' }
 
-  var events = { start:false, deploy:false }
-  builder.on('start', function() { events.start = true })
+  var events = { 'fetch':false, 'deploy':false }
+  builder.on('fetch', function() { events.fetch = true })
   builder.on('deploy', function() { events.deploy = true })
 
   setTimeout(check_for_deploy, couch.rtt() * 2)
   function check_for_deploy() {
-    t.ok(events.start, 'The builder should have started automatically')
+    t.ok(events.fetch, 'The builder should have started automatically')
     t.ok(events.deploy, 'The builder should have deployed by now')
 
     builder.stop()
@@ -105,7 +143,7 @@ test('Autostart', function(t) {
 test('Autostop', function(t) {
   var builder = new api.Builder({ autostart:true, autostop:true })
   builder.source = couch.DB
-  builder.output = {}
+  builder.target = {}
   builder.template = function() { return 'I autostop' }
 
   var stopped = false
@@ -137,7 +175,7 @@ test('Bad couch output', function(t) {
     url = url[1]
 
     var error = null
-    var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'output':url })
+    var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'target':url })
     builder.on('error', function(er) { error = er })
 
     setTimeout(check_error, couch.rtt())
@@ -152,7 +190,7 @@ test('Bad couch output', function(t) {
 
 test('Good couch output', function(t) {
   var doc_url = couch.DB + '/output'
-  var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'output':doc_url })
+  var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'target':doc_url })
 
   var error = null
     , done = false
