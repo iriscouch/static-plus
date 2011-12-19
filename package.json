@@ -11,7 +11,7 @@
 
 , "dependencies"   : { "follow"  : "~0.6.1"
                      , "rimraf"  : "~1.0.9"
-                     , "kanso"   : "0.1.2-npm1"
+                     , "kanso"   : "0.1.2-npm"
                      , "request" : "~2.2.9"
                      , "handlebars": "1.0.2beta"
                      , "winston" : "~0.5.9"
