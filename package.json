@@ -11,6 +11,7 @@
 
 , "dependencies"   : { "follow"  : "~0.6.1"
                      , "rimraf"  : "~1.0.9"
+                     , "txn"     : "~0.2.6"
                      , "kanso"   : "0.1.2-npm"
                      , "request" : "~2.2.9"
                      , "fixed-event": "~0.2.0"
