@@ -193,14 +193,17 @@ test('Good couch output', function(t) {
   var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'target':doc_url })
 
   var error = null
+    , target = null
     , done = false
+
   builder.on('error', function(er) { error = er })
+  builder.on('target', function(t) { target = t })
   builder.on('stop', function() { done = true })
 
   setTimeout(check_result, couch.rtt() * 2)
   function check_result() {
-    return t.end()
     t.false(error, 'No errors for good doc url: ' + doc_url)
+    t.equal(target, doc_url+'-baking', 'Builder emitted its target')
     t.ok(done, 'Builder finished with good doc_url')
 
     t.end()
