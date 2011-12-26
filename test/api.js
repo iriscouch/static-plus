@@ -189,23 +189,35 @@ test('Bad couch output', function(t) {
 })
 
 test('Good couch output', function(t) {
-  var doc_url = couch.DB + '/output'
-  var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'target':doc_url })
+  request.post({'uri':couch.DB, 'json':{'_id':'output'}}, function(er, res) {
+    if(er) throw er
 
-  var error = null
-    , target = null
-    , done = false
+    var ids = ['output', 'no-exist-1234']
+    test_id()
+    function test_id() {
+      var id = ids.shift()
+      if(!id)
+        return t.end()
 
-  builder.on('error', function(er) { error = er })
-  builder.on('target', function(t) { target = t })
-  builder.on('stop', function() { done = true })
+      var doc_url = couch.DB + '/' + id
+      var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'target':doc_url })
 
-  setTimeout(check_result, couch.rtt() * 2)
-  function check_result() {
-    t.false(error, 'No errors for good doc url: ' + doc_url)
-    t.equal(target, doc_url+'-baking', 'Builder emitted its target')
-    t.ok(done, 'Builder finished with good doc_url')
+      var error = null
+        , target = null
+        , done = false
 
-    t.end()
-  }
+      builder.on('error', function(er) { error = er })
+      builder.on('target', function(t) { target = t })
+      builder.on('stop', function() { done = true })
+
+      setTimeout(check_result, couch.rtt() * 2)
+      function check_result() {
+        t.false(error, 'No errors for good doc url: ' + doc_url)
+        t.equal(target, doc_url+'-baking', 'Builder emitted its target')
+        t.ok(done, 'Builder finished with good doc_url')
+
+        test_id()
+      }
+    }
+  })
 })
