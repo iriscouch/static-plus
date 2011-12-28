@@ -213,7 +213,7 @@ test('Good couch output', function(t) {
       builder.on('target', function(t) { target = t })
       builder.on('stop', function() { done = true })
 
-      setTimeout(check_result, couch.rtt() * 50)
+      setTimeout(check_result, couch.rtt() * 3)
       function check_result() {
         t.equal(error, null, 'No errors for good doc url: ' + doc_url)
         t.equal(target, doc_url, 'Builder emitted its target')

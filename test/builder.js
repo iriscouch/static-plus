@@ -15,13 +15,15 @@ test('Build to couch', function(t) {
   var builder = new api.Builder
   builder.target = couch.DB + '/mysite'
   builder.page('', 'Hello, world')
-  //builder.page('jason', 'Hello, Jason')
+  builder.page('jason', 'Hello, Jason')
+  builder.page('hunter', 'Hello, Jason Hunter')
+  builder.page('smith', 'Hello, Jason Hunter Smith')
   builder.deploy()
 
   var result = null
   builder.on('deploy', function(dep) { result = dep })
 
-  setTimeout(check_deploy, couch.rtt())
+  setTimeout(check_deploy, couch.rtt() * 2)
   function check_deploy() {
     console.dir(result)
     t.ok(result, 'Builder deployed')
