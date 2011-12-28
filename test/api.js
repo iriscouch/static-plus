@@ -159,10 +159,10 @@ test('Autostop', function(t) {
 })
 
 test('Bad couch output', function(t) {
-  var bad_urls = [ [ /ECONNREFUSED/    , 'http://localhost:10' ]
-                 , [ /database URL/    , require('path').dirname(couch.DB) ]
-                 , [ /not a document/  , couch.DB + '/doc_one/attachment'  ]     // These two errors are
-                 , [ /CouchDB database/, couch.DB + '/doc/attachment/too_deep' ] // actually the same one.
+  var bad_urls = [ [ /ECONNREFUSED/    , 'http://localhost:10/db/id' ]
+                 , [ /Bad database/    , require('path').dirname(couch.DB) ]
+                 , [ /document ID/     , couch.DB + '/doc_one/attachment'  ]     // These two errors are
+                 , [ /Bad CouchDB doc/ , couch.DB + '/doc/attachment/too_deep' ] // actually the same one.
                  ]
 
   test_url()
@@ -175,13 +175,15 @@ test('Bad couch output', function(t) {
     url = url[1]
 
     var error = null
-    var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'target':url })
+    try {
+      var builder = new auto.Builder({ 'template':couch.simple_tmpl, 'target':url })
+    } catch (er) { error = er }
     builder.on('error', function(er) { error = er })
 
     setTimeout(check_error, couch.rtt())
     function check_error() {
       t.ok(error, 'Bad URL should have caused an error: ' + url)
-      t.ok(error.message.match(message), 'Bad url '+url+' caused error: ' + message)
+      t.ok(error && error.message.match(message), 'Bad url '+url+' caused error: ' + message)
 
       test_url() // Next one
     }
@@ -191,6 +193,7 @@ test('Bad couch output', function(t) {
 test('Good couch output', function(t) {
   request.post({'uri':couch.DB, 'json':{'_id':'output'}}, function(er, res) {
     if(er) throw er
+    t.equal(res.statusCode, 201, 'Create output document')
 
     var ids = ['output', 'no-exist-1234']
     test_id()
@@ -210,11 +213,11 @@ test('Good couch output', function(t) {
       builder.on('target', function(t) { target = t })
       builder.on('stop', function() { done = true })
 
-      setTimeout(check_result, couch.rtt() * 2)
+      setTimeout(check_result, couch.rtt() * 50)
       function check_result() {
-        t.false(error, 'No errors for good doc url: ' + doc_url)
-        t.equal(target, doc_url+'-baking', 'Builder emitted its target')
-        t.ok(done, 'Builder finished with good doc_url')
+        t.equal(error, null, 'No errors for good doc url: ' + doc_url)
+        t.equal(target, doc_url, 'Builder emitted its target')
+        t.equal(done, true, 'Builder finished with good doc_url')
 
         test_id()
       }
