@@ -25,7 +25,6 @@ test('Build to couch', function(t) {
 
   setTimeout(check_deploy, couch.rtt() * 2)
   function check_deploy() {
-    console.dir(result)
     t.ok(result, 'Builder deployed')
     t.end()
   }
