@@ -30,7 +30,7 @@ test('Build to object', function(t) {
     function check_deploys() {
       t.ok(deploy, 'One deploy should have happened since the DB had one document')
       t.ok(deploy.foo, 'The document was deployed')
-      t.equal(deploy.foo, 'foo says tball', 'Deployed "page" matches the template')
+      t.equal("" + deploy.foo, 'foo says tball', 'Deployed "page" matches the template')
 
       t.end()
     }

@@ -29,3 +29,19 @@ test('Build to couch', function(t) {
     t.end()
   }
 })
+
+test('Pages in memory are buffers', function(t) {
+  var builder = new api.Builder
+  builder.target = {}
+
+  builder.page('', 'Hello, world')
+  builder.page('stuff', new Buffer('This is stuff'))
+  builder.deploy()
+
+  builder.on('deploy', function() {
+    t.equal(builder.target[''] instanceof Buffer, true, 'Pages become Buffer objects in memory')
+    t.equal(builder.target['stuff'] instanceof Buffer, true, 'Buffers remain buffer objects in memory')
+
+    t.end()
+  })
+})

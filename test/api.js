@@ -128,9 +128,9 @@ test('Manually add a page', function(t) {
 
   t.equal(Object.keys(pages).length, 2, 'Two pages emitted')
   t.equal(pages[''].id, '', 'Got the blank page by id')
-  t.equal(pages[''].content, 'Blank page', 'Got the blank page content')
+  t.equal("" + pages[''].content, 'Blank page', 'Got the blank page content')
   t.equal(pages.stuff.id, 'stuff', 'Got the stuff page by id')
-  t.equal(pages.stuff.content, 'A page with stuff', 'Got the stuff page content')
+  t.equal("" + pages.stuff.content, 'A page with stuff', 'Got the stuff page content')
 
   t.end()
 })
