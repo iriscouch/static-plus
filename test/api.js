@@ -124,7 +124,7 @@ test('Manually add a page', function(t) {
   builder.on('page', function(page) { pages[page.id] = page })
 
   builder.page('', 'Blank page') // By parameters
-  builder.page({'id':'stuff', 'content':'A page with stuff'}) // By object
+  builder.page('stuff', 'A page with stuff') // Also by parameters (no more by-object pages)
 
   t.equal(Object.keys(pages).length, 2, 'Two pages emitted')
   t.equal(pages[''].id, '', 'Got the blank page by id')
