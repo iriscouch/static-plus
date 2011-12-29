@@ -1,3 +1,8 @@
+// Static Plus API tests
+//
+// WARNING: This comment will be searched for by one of the tests below. Waldo!
+//
+
 var fs = require('fs')
   , tap = require('tap')
   , test = tap.test
@@ -123,16 +128,28 @@ test('Manually add a page', function(t) {
   var pages = {}
   builder.on('page', function(page) { pages[page.id] = page })
 
-  builder.page('', 'Blank page') // By parameters
-  builder.page('stuff', 'A page with stuff') // Also by parameters (no more by-object pages)
+  builder.page('', 'Blank page')
+  builder.page('stuff', 'A page with stuff', 'text/plain')
+  builder.load('this', __filename, 'application/javascript')
 
-  t.equal(Object.keys(pages).length, 2, 'Two pages emitted')
-  t.equal(pages[''].id, '', 'Got the blank page by id')
-  t.equal("" + pages[''].content, 'Blank page', 'Got the blank page content')
-  t.equal(pages.stuff.id, 'stuff', 'Got the stuff page by id')
-  t.equal("" + pages.stuff.content, 'A page with stuff', 'Got the stuff page content')
+  builder.deploy()
+  builder.on('deploy', function() {
+    t.equal(Object.keys(pages).length, 3, 'Three pages emitted')
 
-  t.end()
+    t.equal(pages[''].id, '', 'Got the blank page by id')
+    t.equal("" + pages[''].content, 'Blank page', 'Got the blank page content')
+
+    t.equal(pages.stuff.id, 'stuff', 'Got the stuff page by id')
+    t.equal("" + pages.stuff.content, 'A page with stuff', 'Got the stuff page content')
+
+    t.equal(pages.this.id, 'this', 'Got this file by id')
+    var content = "" + pages.this.content
+      , found = content.split(/\n/).some(function(line) { return line.match(/Waldo!/) })
+
+    t.ok(found, 'Added this file to the pages')
+
+    t.end()
+  })
 })
 
 test('Autostart', function(t) {
