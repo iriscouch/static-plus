@@ -256,3 +256,26 @@ test('Good couch output', function(t) {
     }
   })
 })
+
+test('Template files', function(t) {
+  // This is a little crazy but I'll do it for now. Hopefully this file and build.js don't have double-braces anywhere.
+  var builder = new api.Builder
+  builder.target = {}
+  builder.template = __filename
+  builder.partials.build_js = __dirname + '/builder.js'
+
+  var template = null
+  builder.on('template', function(tm) { template = tm })
+
+  builder.doc({_id:'hey'})
+  builder.deploy()
+
+  builder.on('deploy', function() {
+    t.ok(template, 'Template event was fired')
+    t.type(template, 'function', 'Template was compiled from this file')
+    t.type(builder.partials.build_js, 'function', 'Partial template built from the other test file')
+    t.ok(builder.target.hey instanceof Buffer, 'Builder made hey and it was a Buffer')
+
+    t.end()
+  })
+})
