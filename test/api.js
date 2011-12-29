@@ -23,6 +23,21 @@ test('Builder API', function(t) {
   t.end()
 })
 
+test('Attaching to events', function(t) {
+  var builder = new api.Builder
+  builder.target = {}
+
+  builder.deploy()
+
+  var deploys = 0
+  builder.on('deploy', function() { deploys += 1 })
+  setTimeout(check_deploys, 50)
+  function check_deploys() {
+    t.equal(deploys, 1, 'Got a deploy event even when attaching after calling deploy')
+    t.end()
+  }
+})
+
 test('Builder bad values', function(t) {
   function tmpl() { return 'A template!' }
 
