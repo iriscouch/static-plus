@@ -40,6 +40,6 @@ function json_page(doc) {
          , '<body>'
          , '<pre><code>' + util.inspect(doc, false, 50) + '</code></pre>'
          , '</body>'
-         , '</html>
+         , '</html>'
          ].join('')
 }
