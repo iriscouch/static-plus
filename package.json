@@ -1,5 +1,5 @@
 { "name": "static-plus"
-, "version": "0.2.0"
+, "version": "0.2.1"
 , "author": { "name": "Jason Smith"
             , "email": "jhs@iriscouch.com" }
 , "description": "Build static web sites from templates. Plus."
