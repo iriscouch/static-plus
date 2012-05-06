@@ -4,42 +4,57 @@ Static+ builds web sites from a data stream and some HTML templates.
 
 It can deploy the site as files in your filesystem, an S3 or CloudFront site, or from CouchDB.
 
-## Is it any good?
+Static+ allows the following work flow:
 
-Yes.
+    [CouchDB data] --> Static+ --+--> HTML5 files on your disk
+                                 |
+                                 or
+                                 |
+                                 +--> HTML5 attachments in CouchDB
+                                 |
+                                 or
+                                 |
+                                 +--> HTML5 files in S3/CloudFront (planned)
+                                 |
+                                 or
+                                 |
+                                 +--> HTML5 files in Dropbox (planned)
+
+## Static deployment to CouchDB
+
+Typically Static+ deploys a site to CouchDB.
+
+*Wait, why would I round-trip from CouchDB and back?*
+
+Because Static+ turns a **database full of data** into a **document full of attachments**. That's the "plus" part.
+
+* Fast. No shows, no lists, no views. Every request is a static download from an attachment.
+* Push to a staging URL for QA, promote into production with an atomic transaction
+* Every path in the site is static, simple, and fast; with two exceptions:
+  1. `/_couchdb` gives your site AJAX access to the CouchDB server hosting the site.
+  2. `/_db` give your site AJAX access to the database hosting the site.
+
+Personally, I (Jason) think this is the perfect Couch app. It is very scalable. It is very fast. It is very simple. The basic web site has zero moving parts. Then I use [Browser Request][breq] to access a simple, standard CouchDB API.
 
 ## Usage
 
 Install it from NPM
 
-    npm install -g static-plus
+    npm install static-plus
 
-Point it at a CouchDB database
+Static+ is flexible; however; its "beaten path" looks like this:
 
-    static+ http://me:secret@example.iriscouch.com/my_db
-
-## Roadmap
-
-Static+ is an evented API and a command-line tool. It does three things:
-
-1. Let you drop in some templates, point it at a changes feed, and it spits out web pages.
-2. Deploy those web pages to places. Goals, in order:
+1. You define a [Handlebars] template
+1. You define a **source database**. Static+ spits out (roughly) one web page per document.
+1. You define a **target** and Static+ deploys the output to there. Valid targets:
    1. A directory in a filesystem
    2. S3. Just CNAME your domain there and you're done
    3. CouchDB attachments, **plus** access to the Couch API
-3. Watch the changes feed and re-deploy when appropriate
-
-The directory and S3 deployment are straightforward.
-
-The Couch deployment is the "plus" part.
-
-* Fast. No shows, no lists, no views. No rewrites. Every request is a static download from an attachment.
-* Push to a staging URL for QA, promote into production with an atomic transaction
-* Two paths are an exception: `/db` and `/couch` which hit the DB api and the couch API respectively.
-* [request.jquery.js][rj] is there for you, of course.
+1. Static+ watch the database `_changes` feed, updating the site when appropriate
 
 ## License
 
 Apache 2.0
 
-[rj]: https://github.com/iriscouch/request_jquery
+[handlebars]: http://handlebarsjs.com/
+[breq]: https://github.com/iriscouch/browser-request/blob/master/test/push.js
