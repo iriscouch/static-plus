@@ -26,7 +26,7 @@ require('defaultable')(module,
 module.exports = Builder
 
 
-//var fs = require('fs')
+var fs = require('fs')
 var URL = require('url')
 var txn = require('txn')
 var GFM = require('github-flavored-markdown')
@@ -200,7 +200,35 @@ Builder.prototype.ddoc = function() {
         throw {'forbidden':'This Static+ database is read-only'}
       }
 
-    return to_txn()
+    doc._attachments = {}
+    var attachments = ['request.js']
+    async.forEach(attachments, attach_file, files_attached)
+
+    function attach_file(name, to_async) {
+      console.dir(require)
+      console.log('trying %j', {name:name, def:require._defaultable})
+      var path = __dirname + '/lib/' + name
+      fs.readFile(path, function(er, body) {
+        if(er)
+          return to_async(er)
+
+        var loc = self.namespace + '/' + name
+        doc._attachments[loc] = {}
+        doc._attachments[loc].data = body.toString('base64')
+        doc._attachments[loc].content_type = 'application/javascript' // XXX
+
+        self.log.debug('Attached builtin', {'location':loc, 'length':body.length})
+        return to_async()
+      })
+    }
+
+    function files_attached(er) {
+      if(er)
+        return to_txn(er)
+
+      self.log.debug('Attached builtin files')
+      to_txn()
+    }
   }
 
   function ddoc_built(er, doc, result) {
