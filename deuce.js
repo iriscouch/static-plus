@@ -226,7 +226,7 @@ Builder.prototype.follow = function() {
   self.feed.inactivity_ms = 24 * 60 * 60 * 1000 // 1 day
   self.feed.inactivity_ms = 5 * 1000 // XXX
 
-  // self.feed.filter
+  self.feed.filter = function(doc) { return ! doc._id.match(/^_design\//) }
 
   process.nextTick(function() { self.feed.follow() })
 
@@ -237,6 +237,7 @@ Builder.prototype.follow = function() {
   self.feed.on('catchup', function(seq) {
     self.log.debug('Feed caught up', {'id':self.id, 'seq':seq})
     self.caught_up = true
+    self.push()
   })
 
   self.feed.on('change', function(change) {
@@ -336,20 +337,68 @@ Builder.prototype.publish = function(doc, callback) {
     }
   }
 
-  var template = doc.template
-    , attachment = self.attachments[template]
+  var attachment = self.attachments[doc.template]
+    , template   = attachment && attachment.handlebars
+    , body       = attachment && attachment.body
 
-  if(attachment)
-    attachment = attachment.handlebars || attachment.body
-
-  if(!attachment) {
+  if(!template && !body) {
     self.log.warn('No attachment for template', {'template':template})
     return callback()
   }
 
-  console.dir(attachment)
-  console.warn('TODO', {path:path, tmpl:template, a:self.attachments})
-  callback(new Error('XXX'))
+  var output = null
+  if(!template)
+    output = body
+  else {
+    // Build the scope for the template.
+
+    // Lowest pri: all docs by id
+    var scope = JSON.parse(JSON.stringify(self.docs))
+
+    // Next pri: the contents of this document.
+    for (var key in doc)
+      scope[key] = JSON.parse(JSON.stringify(doc[key]))
+
+    // Highest pri: The markdown helper.
+    delete scope.markdown
+
+    var partials = {}
+      , helpers  = {}
+
+    output = template(scope, {'partials':partials, 'helpers':helpers})
+  }
+
+  var ddoc_id = '_design/' + DEFS.staging
+  txn({'couch':self.couch, 'db':self.db, 'id':ddoc_id}, attach_output, output_attached)
+
+  function attach_output(ddoc, to_txn) {
+    ddoc._attachments = ddoc._attachments || {}
+
+    var name     = (self.namespace + '/' + doc.path).replace(/\/+$/, '')
+      , exists   = (name in ddoc._attachments)
+
+    self.log.debug('Attach', {'name':name, 'exists':exists, 'length':output.length})
+
+    ddoc._attachments[name] = {}
+    ddoc._attachments[name].data = new Buffer(output).toString('base64')
+    ddoc._attachments[name].content_type = attachment.content_type
+
+    // And again for the trailing slash path.
+    name += '/'
+    ddoc._attachments[name] = {}
+    ddoc._attachments[name].data = new Buffer(output).toString('base64')
+    ddoc._attachments[name].content_type = attachment.content_type
+
+    return to_txn()
+  }
+
+  function output_attached(er) {
+    if(er)
+      return callback(er)
+
+    self.log.debug('Finished attachments', {'id':doc._id})
+    callback()
+  }
 }
 
 
