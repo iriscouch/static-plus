@@ -29,6 +29,7 @@ module.exports = Builder
 //var fs = require('fs')
 var URL = require('url')
 var txn = require('txn')
+var GFM = require('github-flavored-markdown')
 var path = require('path')
 var util = require('util')
 var async = require('async')
@@ -366,7 +367,14 @@ Builder.prototype.publish = function(doc, callback) {
     var partials = {}
       , helpers  = {}
 
-    output = template(scope, {'partials':partials, 'helpers':helpers})
+    helpers.markdown = mk_markdown_helper(scope, partials, helpers)
+
+    try {
+      output = template(scope, {'partials':partials, 'helpers':helpers})
+    } catch (er) {
+      self.log.debug('Template error', {'keys':Object.keys(er), 'message':er.message, 'str':er.toString()})
+      return callback(er)
+    }
   }
 
   var ddoc_id = '_design/' + DEFS.staging
@@ -426,17 +434,18 @@ Builder.prototype.die = function(er) {
 }
 
 
+function mk_markdown_helper(scope, partials, helpers) {
+  return function doc_markdown(body, extra) {
+    body = GFM.parse(body)
+    var template = handlebars.compile(body)
+    return template(scope, {'partials':partials, 'helpers':helpers})
+  }
+}
+
 //
 // Utilities
 //
 
-function needs_writing(page) {
-  return !page.is_loading && !page.is_writing
-}
-
-function set_writing(page) {
-  page.is_writing = true
-}
 
 function in_list(element, list) {
   for(var i = 0; i < list.length; i++)
