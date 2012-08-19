@@ -130,6 +130,7 @@ Builder.prototype.set_config = function() {
 
   var config = [ [ 'vhosts', 'www.'    + self.hostname, '/'+self.db+'/_design/'+DEFS.production+'/_rewrite' ]
                , [ 'vhosts', 'staging.'+ self.hostname, '/'+self.db+'/_design/'+DEFS.staging   +'/_rewrite' ]
+               , [ 'httpd' , 'secure_rewrites'        , 'false'                                             ]
                ]
 
   async.forEach(config, set_config, configs_set)
