@@ -225,7 +225,7 @@ Builder.prototype.follow = function() {
   self.feed.db = db_url
   self.feed.include_docs = true
   self.feed.inactivity_ms = 24 * 60 * 60 * 1000 // 1 day
-  self.feed.inactivity_ms = 5 * 1000 // XXX
+  //self.feed.inactivity_ms = 5 * 1000 // XXX
 
   self.feed.filter = function(doc) { return ! doc._id.match(/^_design\//) }
 
