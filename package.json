@@ -12,6 +12,7 @@
 , "dependencies"   : { "follow"  : "~0.8.0"
                      , "rimraf"  : "~1.0.9"
                      , "txn"     : "~0.2.9"
+                     , "async"   : "~0.1.22"
                      , "request" : "~2.10.0"
                      , "fixed-event": "~0.2.0"
                      , "handlebars": "1.0.2beta"
