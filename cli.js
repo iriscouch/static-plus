@@ -15,31 +15,32 @@
 // limitations under the License.
 
 var fs = require('fs')
+var URL = require('url')
   , util = require('util')
 
-var sp = require('./api').defaults({ 'autostart': true })
-  , lib = require('./lib').defaults({ 'args': ['couch db']
-                                    , 'describe': { 'template': 'Path to template file'
-                                                  }
+var sp = require('./api')
+  , lib = require('./lib').defaults({ 'args': ['couch', 'db', 'hostname']
+                                    //, 'describe': { 'couch': 'URL to CouchDB'
+                                    //              , 'db'   : 'Database name'
+                                    //              , 'hostname': 'website hostname'
+                                    //              }
                                     })
 
+function main(couch, db, hostname) {
+  var site = new sp.Deuce
+  site.db    = db
+  site.hostname = hostname
+
+  if(lib.argv.log)
+    site.log.transports.console.level = lib.argv.log
+
+  couch = URL.parse(couch)
+  if(lib.argv.creds)
+    couch.auth = lib.argv.creds
+
+  site.couch = URL.format(couch)
+  site.run()
+}
+
 if(require.main === module)
-  main.apply(null, lib.argv._);
-
-function main(url) {
-  var site = new sp.Builder;
-
-  site.template = lib.argv.template || json_page
-  site.target = 'site';
-}
-
-function json_page(doc) {
-  return [ '<!DOCTYPE html>'
-         , '<html>'
-         , '<head><title>' + doc._id + '</title></head>'
-         , '<body>'
-         , '<pre><code>' + util.inspect(doc, false, 50) + '</code></pre>'
-         , '</body>'
-         , '</html>'
-         ].join('')
-}
+  main.apply(null, lib.argv._)

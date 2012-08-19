@@ -18,6 +18,7 @@ require('defaultable').def(module,
 
 
 module.exports = { 'Builder'   : require('./lib/builder')
+                 , 'Deuce'     : require('./deuce')
                  , 'handlebars': require('handlebars')
                  }
 
