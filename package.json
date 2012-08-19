@@ -9,14 +9,14 @@
                 , "url": "git://github.com/iriscouch/static-plus" }
 , "engines": [ "node" ]
 
-, "dependencies"   : { "follow"  : "~0.6.1"
+, "dependencies"   : { "follow"  : "~0.8.0"
                      , "rimraf"  : "~1.0.9"
-                     , "txn"     : "~0.2.6"
-                     , "request" : "~2.2.9"
+                     , "txn"     : "~0.2.9"
+                     , "request" : "~2.10.0"
                      , "fixed-event": "~0.2.0"
                      , "handlebars": "1.0.2beta"
                      , "winston" : "~0.5.9"
-                     , "optimist": "0.3.0"
+                     , "optimist": "0.3.4"
                      , "defaultable": "0.7.2"
                      }
 
