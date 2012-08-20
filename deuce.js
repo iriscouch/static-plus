@@ -288,7 +288,7 @@ Builder.prototype.doc = function(doc) {
   var self = this
 
   if(doc._deleted)
-    return self.die(new Error('Deleted documents not implemented'))
+    return self.log.warn('Ignore deleted doc', {'id':doc._id})
 
   self.docs[doc._id] = doc
 
