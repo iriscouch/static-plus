@@ -16,34 +16,51 @@
 
 var fs = require('fs')
 var URL = require('url')
-  , util = require('util')
+var util = require('util')
+var optimist = require('optimist')
 
-var sp = require('./api')
-  , lib = require('./lib').defaults({ 'args': ['couch', 'db', 'hostname']
-                                    , 'describe': { 'prefix': 'Production hostname prefix (default "www.")'
-                                                  }
-                                    })
+//var sp = require('./api')
+var Deuce = require('./deuce')
 
-function main(couch, db, hostname) {
-  var site = new sp.Deuce
-  site.db    = db
-  site.hostname = hostname
+var OPTS = optimist.describe('prefix', 'Production hostname prefix')
+                   .default('prefix', 'www.')
+                   .describe('staging-prefix', 'Staging hostname prefix')
+                   .default('staging-prefix', 'staging.')
+                   .describe('seed', 'Seed build data from a directory')
+                   .describe('publish', 'Push website attachments from a directory')
+                   .usage('$0 <couch> <db> <domain | --seed=... | --publish=...>')
 
-  if('prefix' in lib.argv)
-    site.production_prefix = lib.argv.prefix
-  if('staging-prefix' in lib.argv)
-    site.staging_prefix = lib.argv['staging-prefix']
+function main(argv) {
+  var couch = argv._[0]
+    , db    = argv._[1]
+    , host  = argv._[2]
 
-  if(lib.argv.log)
-    site.log.transports.console.level = lib.argv.log
+  var site = new Deuce
+  site.db  = db
+  site.hostname = host
+
+  if(argv.help || (!host && !argv.seed && !argv.publish))
+    return OPTS.showHelp()
+
+  if('prefix' in argv)
+    site.production_prefix = argv.prefix
+  if('staging-prefix' in argv)
+    site.staging_prefix = argv['staging-prefix']
+
+  //if(argv.log)
+  //  site.log.transports.console.level = argv.log
 
   couch = URL.parse(couch)
-  if(lib.argv.creds)
-    couch.auth = lib.argv.creds
+  if(argv.creds)
+    couch.auth = argv.creds
 
   site.couch = URL.format(couch)
   site.run()
 }
 
 if(require.main === module)
-  main.apply(null, lib.argv._)
+  main(OPTS.argv)
+//  , lib = require('./lib').defaults({ 'args': ['couch', 'db', 'hostname']
+//                                    , 'describe': { 'prefix': 'Production hostname prefix (default "www.")'
+//                                                  }
+//                                    })

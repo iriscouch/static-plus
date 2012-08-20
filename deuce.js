@@ -41,8 +41,6 @@ var package = require('./package.json')
 var handlebars = require('handlebars')
 var querystring = require('querystring')
 
-var lib = require('./lib')
-
 var builder_id = 0
 
 util.inherits(Builder, fixed.EventEmitter)
@@ -52,7 +50,7 @@ function Builder () {
 
   builder_id += 1
   self.id = builder_id
-  self.log = lib.getLogger('Builder')
+  self.log = console
 
   self.production_prefix = 'www.'
   self.staging_prefix    = 'staging.'
