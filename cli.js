@@ -28,19 +28,19 @@ var OPTS = optimist.describe('prefix', 'Production hostname prefix')
                    .default('staging-prefix', 'staging.')
                    .describe('seed', 'Seed build data from a directory')
                    .describe('publish', 'Push website attachments from a directory')
-                   .usage('$0 <couch> <db> <domain | --seed=... | --publish=...>')
+                   .usage('$0 <couch> <db> <domain> [--seed=...] [--publish=...]')
 
 function main(argv) {
   var couch = argv._[0]
     , db    = argv._[1]
     , host  = argv._[2]
 
+  if(!couch || !db || !host)
+    return OPTS.showHelp()
+
   var site = new Deuce
   site.db  = db
   site.hostname = host
-
-  if(argv.help || (!host && !argv.seed && !argv.publish))
-    return OPTS.showHelp()
 
   if('prefix' in argv)
     site.production_prefix = argv.prefix
@@ -55,7 +55,13 @@ function main(argv) {
     couch.auth = argv.creds
 
   site.couch = URL.format(couch)
-  site.run()
+
+  if(argv.seed)
+    site.seed(argv.seed)
+  else if(argv.publish)
+    site.publish(argv.publish)
+  else
+    site.run()
 }
 
 if(require.main === module)

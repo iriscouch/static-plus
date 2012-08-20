@@ -440,6 +440,66 @@ Builder.prototype.publish = function(doc, callback) {
 }
 
 
+Builder.prototype.seed = function(dir) {
+  var self = this
+
+  self.log.debug('Seed: %j', dir)
+  fs.readdir(dir, function(er, res) {
+    if(er)
+      return self.die(er)
+
+    var atts = {}
+    self.log.debug('Seed files: %j', res)
+    async.forEach(res, seed_file, files_seeded)
+
+    function seed_file(name, to_async) {
+      var match = name.match(/\.(js|html)$/)
+        , type = match && match[1]
+
+      self.log.debug('seed_file: %j', name)
+
+      if(!type)
+        return to_async()
+
+      types = {js:'application/javascript', html:'text/html'}
+      type = types[type]
+
+      fs.readFile(dir+'/'+name, function(er, body) {
+        if(er)
+          return to_async(er)
+
+        var data = body.toString('base64')
+        atts[name] = { 'content_type':type, 'data':data }
+        return to_async()
+      })
+    }
+
+    function files_seeded(er) {
+      if(er)
+        self.die(er)
+
+      self.log.debug('Attach seed files: %j', Object.keys(atts))
+      txn({'couch':self.couch, 'db':self.db, 'id':'seed', 'create':true}, seed_files, files_seeded)
+
+      function seed_files(doc, to_txn) {
+        doc._attachments = doc._attachments || {}
+        Object.keys(atts).forEach(function(name) {
+          doc._attachments[name] = atts[name]
+        })
+
+        return to_txn()
+      }
+
+      function files_seeded(er) {
+        if(er)
+          self.die(er)
+
+        self.log.debug('Seed complete')
+      }
+    }
+  })
+}
+
 Builder.prototype.stop = function(reason) {
   var self = this
 
