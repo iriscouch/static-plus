@@ -372,7 +372,8 @@ Builder.prototype.publish = function(doc, callback) {
     }
   }
 
-  var attachment = self.attachments[doc.template]
+  var tmpl_id    = doc.template + '.html'
+  var attachment = self.attachments[tmpl_id]
     , template   = attachment && attachment.handlebars
     , body       = attachment && attachment.body
 
