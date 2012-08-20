@@ -91,10 +91,15 @@ Builder.prototype.run = function() {
 }
 
 
-Builder.prototype.prep = function() {
+Builder.prototype.normalize = function() {
   var self = this
 
   self.couch = self.couch.replace(/\/+$/, '')
+}
+
+Builder.prototype.prep = function() {
+  var self = this
+  self.normalize()
 
   self.log.debug('Prepare couch', {'url':self.couch})
   request({'url':self.couch, 'json':true}, function(er, res) {
@@ -442,63 +447,39 @@ Builder.prototype.publish = function(doc, callback) {
 
 Builder.prototype.seed = function(dir) {
   var self = this
+  self.normalize()
 
   self.log.debug('Seed: %j', dir)
-  fs.readdir(dir, function(er, res) {
+  dir_to_attachments(dir, function(er, atts) {
     if(er)
       return self.die(er)
 
-    var atts = {}
-    self.log.debug('Seed files: %j', res)
-    async.forEach(res, seed_file, files_seeded)
-
-    function seed_file(name, to_async) {
-      var match = name.match(/\.(js|html)$/)
-        , type = match && match[1]
-
-      self.log.debug('seed_file: %j', name)
-
-      if(!type)
-        return to_async()
-
-      types = {js:'application/javascript', html:'text/html'}
-      type = types[type]
-
-      fs.readFile(dir+'/'+name, function(er, body) {
-        if(er)
-          return to_async(er)
-
-        var data = body.toString('base64')
-        atts[name] = { 'content_type':type, 'data':data }
-        return to_async()
-      })
-    }
-
-    function files_seeded(er) {
+    attach_to_doc(atts, self.couch, self.db, 'seed', function(er) {
       if(er)
-        self.die(er)
-
-      self.log.debug('Attach seed files: %j', Object.keys(atts))
-      txn({'couch':self.couch, 'db':self.db, 'id':'seed', 'create':true}, seed_files, files_seeded)
-
-      function seed_files(doc, to_txn) {
-        doc._attachments = doc._attachments || {}
-        Object.keys(atts).forEach(function(name) {
-          doc._attachments[name] = atts[name]
-        })
-
-        return to_txn()
-      }
-
-      function files_seeded(er) {
-        if(er)
-          self.die(er)
-
-        self.log.debug('Seed complete')
-      }
-    }
+        return self.die(er)
+      self.log.debug('Seed complete')
+    })
   })
 }
+
+
+Builder.prototype.publish = function(dir) {
+  var self = this
+
+  dir_to_attachments(dir, function(er, atts) {
+    if(er)
+      return self.die(er)
+
+    var ddoc_id = '_design/' + DEFS.staging
+    attach_to_doc(atts, self.couch, self.db, ddoc_id, function(er) {
+      if(er)
+        return self.die(er)
+
+      self.log.info('Publish complete')
+    })
+  })
+}
+
 
 Builder.prototype.stop = function(reason) {
   var self = this
@@ -528,6 +509,53 @@ function mk_markdown_helper(scope, partials, helpers) {
     body = GFM.parse(body)
     var template = handlebars.compile(body)
     return template(scope, {'partials':partials, 'helpers':helpers})
+  }
+}
+
+
+function dir_to_attachments(dir, callback) {
+  fs.readdir(dir, function(er, res) {
+    if(er)
+      return callback(er)
+
+    var atts = {}
+    async.forEach(res, prep_file, files_prepped)
+
+    function prep_file(name, to_async) {
+      var match = name.match(/\.(js|html)$/)
+        , types = {js:'application/javascript', html:'text/html'}
+        , type = match && types[match[1]]
+
+      if(!type)
+        return to_async()
+
+      fs.readFile(dir+'/'+name, function(er, body) {
+        if(er)
+          return to_async(er)
+
+        var data = body.toString('base64')
+        atts[name] = { 'content_type':type, 'data':data }
+        return to_async()
+      })
+    }
+
+    function files_prepped(er) {
+      callback(er, atts)
+    }
+  })
+}
+
+function attach_to_doc(atts, couch, db, id, callback) {
+  id = encodeURIComponent(id).replace(/^_design%2f/i, '_design/')
+  txn({'couch':couch, 'db':db, 'id':id, 'create':true}, seed_files, callback)
+
+  function seed_files(doc, to_txn) {
+    doc._attachments = doc._attachments || {}
+    Object.keys(atts).forEach(function(name) {
+      doc._attachments[name] = atts[name]
+    })
+
+    return to_txn()
   }
 }
 
