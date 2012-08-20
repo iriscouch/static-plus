@@ -455,6 +455,7 @@ Builder.prototype.seed = function(dir) {
       return self.die(er)
 
     self.log.debug('Attach %d files', Object.keys(atts).length)
+    atts._clean = true
     attach_to_doc(atts, self.couch, self.db, 'seed', function(er) {
       if(er)
         return self.die(er)
@@ -567,11 +568,18 @@ function dir_to_attachments(dir, is_watcher, callback) {
 }
 
 function attach_to_doc(atts, couch, db, id, callback) {
+  var is_clean = !! atts._clean
+  delete atts._clean
+
   id = encodeURIComponent(id).replace(/^_design%2f/i, '_design/')
   txn({'couch':couch, 'db':db, 'id':id, 'create':true}, seed_files, callback)
 
   function seed_files(doc, to_txn) {
-    doc._attachments = doc._attachments || {}
+    if(is_clean)
+      doc._attachments = {}
+    else
+      doc._attachments = doc._attachments || {}
+
     Object.keys(atts).forEach(function(name) {
       doc._attachments[name] = atts[name]
     })
