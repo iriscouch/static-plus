@@ -20,16 +20,19 @@ var URL = require('url')
 
 var sp = require('./api')
   , lib = require('./lib').defaults({ 'args': ['couch', 'db', 'hostname']
-                                    //, 'describe': { 'couch': 'URL to CouchDB'
-                                    //              , 'db'   : 'Database name'
-                                    //              , 'hostname': 'website hostname'
-                                    //              }
+                                    , 'describe': { 'prefix': 'Production hostname prefix (default "www.")'
+                                                  }
                                     })
 
 function main(couch, db, hostname) {
   var site = new sp.Deuce
   site.db    = db
   site.hostname = hostname
+
+  if('prefix' in lib.argv)
+    site.production_prefix = lib.argv.prefix
+  if('staging-prefix' in lib.argv)
+    site.staging_prefix = lib.argv['staging-prefix']
 
   if(lib.argv.log)
     site.log.transports.console.level = lib.argv.log

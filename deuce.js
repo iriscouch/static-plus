@@ -54,6 +54,9 @@ function Builder () {
   self.id = builder_id
   self.log = lib.getLogger('Builder')
 
+  self.production_prefix = 'www.'
+  self.staging_prefix    = 'staging.'
+
   self.couch = null
   self.db    = null
   self.hostname = null
@@ -129,8 +132,8 @@ Builder.prototype.prep = function() {
 Builder.prototype.set_config = function() {
   var self = this
 
-  var config = [ [ 'vhosts', 'www.'    + self.hostname, '/'+self.db+'/_design/'+DEFS.production+'/_rewrite' ]
-               , [ 'vhosts', 'staging.'+ self.hostname, '/'+self.db+'/_design/'+DEFS.staging   +'/_rewrite' ]
+  var config = [ [ 'vhosts', self.production_prefix + self.hostname, '/'+self.db+'/_design/'+DEFS.production+'/_rewrite' ]
+               , [ 'vhosts', self.staging_prefix    + self.hostname, '/'+self.db+'/_design/'+DEFS.staging   +'/_rewrite' ]
                , [ 'httpd' , 'secure_rewrites'        , 'false'                                             ]
                ]
 
