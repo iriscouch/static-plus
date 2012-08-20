@@ -28,6 +28,8 @@ var OPTS = optimist.describe('prefix', 'Production hostname prefix')
                    .default('staging-prefix', 'staging.')
                    .describe('seed', 'Seed build data from a directory')
                    .describe('publish', 'Push website attachments from a directory')
+                   .describe('watch', 'Continue updating seed or publish directory')
+                   .boolean('watch')
                    .usage('$0 <couch> <db> <domain> [--seed=...] [--publish=...]')
 
 function main(argv) {
@@ -35,12 +37,13 @@ function main(argv) {
     , db    = argv._[1]
     , host  = argv._[2]
 
-  if(!couch || !db || !host)
+  if(argv.help || !couch || !db || !host)
     return OPTS.showHelp()
 
   var site = new Deuce
   site.db  = db
   site.hostname = host
+  site.watch    = argv.watch
 
   if('prefix' in argv)
     site.production_prefix = argv.prefix

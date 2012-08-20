@@ -450,14 +450,15 @@ Builder.prototype.seed = function(dir) {
   self.normalize()
 
   self.log.debug('Seed: %j', dir)
-  dir_to_attachments(dir, function(er, atts) {
+  dir_to_attachments(dir, self.watch, function(er, atts) {
     if(er)
       return self.die(er)
 
+    self.log.debug('Attach %d files', Object.keys(atts).length)
     attach_to_doc(atts, self.couch, self.db, 'seed', function(er) {
       if(er)
         return self.die(er)
-      self.log.debug('Seed complete')
+      self.log.info('Seed complete')
     })
   })
 }
@@ -513,7 +514,7 @@ function mk_markdown_helper(scope, partials, helpers) {
 }
 
 
-function dir_to_attachments(dir, callback) {
+function dir_to_attachments(dir, is_watcher, callback) {
   fs.readdir(dir, function(er, res) {
     if(er)
       return callback(er)
@@ -535,12 +536,32 @@ function dir_to_attachments(dir, callback) {
 
         var data = body.toString('base64')
         atts[name] = { 'content_type':type, 'data':data }
-        return to_async()
+        return to_async(null, atts)
       })
     }
 
     function files_prepped(er) {
       callback(er, atts)
+
+      if(is_watcher)
+        fs.watch(dir, {'persistent':true}, function(ev, name) {
+          console.debug('FS event %j: %j', ev, name)
+          setTimeout(function() { change(ev, name) }, 100)
+        })
+    }
+
+    function change(ev, name) {
+      if(ev != 'change')
+        return
+
+      prep_file(name, function(er) {
+        if(er)
+          throw er // XXX
+
+        var updates = {}
+        updates[name] = atts[name]
+        callback(null, updates)
+      })
     }
   })
 }
