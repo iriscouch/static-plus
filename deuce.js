@@ -211,7 +211,6 @@ Builder.prototype.ddoc = function() {
     async.forEach(attachments, attach_file, files_attached)
 
     function attach_file(name, to_async) {
-      console.dir(require)
       console.log('trying %j', {name:name, def:require._defaultable})
       var path = __dirname + '/lib/' + name
       fs.readFile(path, function(er, body) {
@@ -401,6 +400,15 @@ Builder.prototype.publish = function(doc, callback) {
     var partials = {}
       , helpers  = {}
 
+    Object.keys(self.attachments).forEach(function(name) {
+      var att = self.attachments[name]
+      name = name.replace(/\..*$/, '')
+      partials[name] = att.handlebars || att.body
+    })
+
+    self.log.warn('I should set partials')
+    self.log.warn('%s', util.inspect(self.attachments,0,10))
+    self.log.warn('%s', util.inspect(partials,0,10))
     helpers.markdown = mk_markdown_helper(scope, partials, helpers)
 
     try {
@@ -454,25 +462,25 @@ Builder.prototype.seed = function(dir) {
     if(er)
       return self.die(er)
 
-    self.log.debug('Attach %d files', Object.keys(atts).length)
-    atts._clean = true
+    self.log.debug('Attach files: %j', Object.keys(atts))
     attach_to_doc(atts, self.couch, self.db, 'seed', function(er) {
       if(er)
         return self.die(er)
-      self.log.info('Seed complete')
+      self.log.info('Seed complete: %j', Object.keys(atts))
     })
   })
 }
 
 
-Builder.prototype.publish = function(dir) {
+Builder.prototype.update = function(dir) {
   var self = this
 
-  dir_to_attachments(dir, function(er, atts) {
+  dir_to_attachments(dir, self.watch, function(er, atts) {
     if(er)
       return self.die(er)
 
     var ddoc_id = '_design/' + DEFS.staging
+    atts._keep = true
     attach_to_doc(atts, self.couch, self.db, ddoc_id, function(er) {
       if(er)
         return self.die(er)
@@ -516,6 +524,7 @@ function mk_markdown_helper(scope, partials, helpers) {
 
 
 function dir_to_attachments(dir, is_watcher, callback) {
+  console.debug('dir_to_attachments: %j', dir)
   fs.readdir(dir, function(er, res) {
     if(er)
       return callback(er)
@@ -544,22 +553,45 @@ function dir_to_attachments(dir, is_watcher, callback) {
     function files_prepped(er) {
       callback(er, atts)
 
-      if(is_watcher)
-        fs.watch(dir, {'persistent':true}, function(ev, name) {
-          console.debug('FS event %j: %j', ev, name)
-          setTimeout(function() { change(ev, name) }, 100)
-        })
+      if(!is_watcher)
+        return
+
+      var events = {}
+
+      fs.watch(dir, {'persistent':true}, function(ev, name) {
+        console.debug('FS event %j: %j', ev, name)
+        var key = ev + ':' + name
+        events[key] = {'ev':ev, 'name':name}
+
+        setTimeout(event_batch, 100)
+        function event_batch() {
+          var to_do = events
+          events = {}
+
+          for (var k in to_do) {
+            var ev = to_do[k].ev
+              , name = to_do[k].name
+
+            change(ev, name)
+          }
+        }
+      })
     }
 
     function change(ev, name) {
+      console.info('change %j %j', ev, name)
       if(ev != 'change')
         return
 
+      delete atts[name]
       prep_file(name, function(er) {
         if(er)
           throw er // XXX
 
-        var updates = {}
+        if(!atts[name])
+          return // The name was ignored.
+
+        var updates = {'_keep':true}
         updates[name] = atts[name]
         callback(null, updates)
       })
@@ -568,8 +600,8 @@ function dir_to_attachments(dir, is_watcher, callback) {
 }
 
 function attach_to_doc(atts, couch, db, id, callback) {
-  var is_clean = !! atts._clean
-  delete atts._clean
+  var is_clean = ! atts._keep
+  delete atts._keep
 
   id = encodeURIComponent(id).replace(/^_design%2f/i, '_design/')
   txn({'couch':couch, 'db':db, 'id':id, 'create':true}, seed_files, callback)

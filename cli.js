@@ -27,10 +27,10 @@ var OPTS = optimist.describe('prefix', 'Production hostname prefix')
                    .describe('staging-prefix', 'Staging hostname prefix')
                    .default('staging-prefix', 'staging.')
                    .describe('seed', 'Seed build data from a directory')
-                   .describe('publish', 'Push website attachments from a directory')
-                   .describe('watch', 'Continue updating seed or publish directory')
+                   .describe('update', 'Push website attachments from a directory')
+                   .describe('watch', 'Continue updating seed or update directory')
                    .boolean('watch')
-                   .usage('$0 <couch> <db> <domain> [--seed=...] [--publish=...]')
+                   .usage('$0 <couch> <db> <domain> [--seed=...] [--update=...]')
 
 function main(argv) {
   var couch = argv._[0]
@@ -61,10 +61,11 @@ function main(argv) {
 
   if(argv.seed)
     site.seed(argv.seed)
-  else if(argv.publish)
-    site.publish(argv.publish)
-  else
-    site.run()
+
+  else if(argv.update)
+    site.update(argv.update)
+
+  site.run()
 }
 
 if(require.main === module)
