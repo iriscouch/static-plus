@@ -16,6 +16,7 @@ require('defaultable')(module,
   { 'namespace': 'SP'
   , 'production': 'SP-production'
   , 'staging'   : 'SP-staging'
+  , 'template_name': 'page'
   // 'autostart': false
   //, 'autostop' : false
   //, 'partials' : {}
@@ -403,7 +404,7 @@ Builder.prototype.publish = function(doc, callback) {
     }
   }
 
-  var tmpl_name  = doc.template || 'page'
+  var tmpl_name  = doc.template || DEFS.template_name
     , tmpl_id    = tmpl_name + '.html'
     , attachment = self.attachments[tmpl_id]
     , template   = attachment && attachment.handlebars
