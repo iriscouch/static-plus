@@ -441,7 +441,6 @@ Builder.prototype.publish = function(doc, callback) {
     })
 
     helpers.markdown = mk_markdown_helper(scope, partials, helpers)
-    partials = helpers = {} // XXX
 
     try {
       output = template(scope, {'partials':partials, 'helpers':helpers})
@@ -552,6 +551,9 @@ Builder.prototype.die = function(er) {
 
 function mk_markdown_helper(scope, partials, helpers) {
   return function doc_markdown(body, extra) {
+    if(typeof body != 'string')
+      return ''
+
     body = GFM.parse(body)
     var template = handlebars.compile(body)
     return template(scope, {'partials':partials, 'helpers':helpers})
