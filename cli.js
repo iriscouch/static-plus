@@ -27,10 +27,10 @@ var OPTS = optimist.describe('prefix', 'Production hostname prefix')
                    .describe('staging-prefix', 'Staging hostname prefix')
                    .default('staging-prefix', 'staging.')
                    .describe('seed', 'Seed build data from a directory')
-                   .describe('update', 'Push website attachments from a directory')
-                   .describe('watch', 'Continue updating seed or update directory')
+                   .describe('publish', 'Push website attachments from a directory')
+                   .describe('watch', 'Continue updating seed or publish directory')
                    .boolean('watch')
-                   .usage('$0 <couch> <db> <domain> [--seed=...] [--update=...]')
+                   .usage('$0 <couch> <db> <domain> [--seed=...] [--publish=...]')
 
 function main(argv) {
   var couch = argv._[0]
@@ -46,7 +46,7 @@ function main(argv) {
   site.watch    = argv.watch
 
   if('prefix' in argv)
-    site.production_prefix = argv.prefix
+    site.production_prefix = argv.prefix || '' // I think Optimist turns "" into 0.
   if('staging-prefix' in argv)
     site.staging_prefix = argv['staging-prefix']
 
@@ -62,8 +62,8 @@ function main(argv) {
   if(argv.seed)
     site.seed(argv.seed)
 
-  else if(argv.update)
-    site.update(argv.update)
+  if(argv.publish)
+    site.update(argv.publish)
 
   site.run()
 }

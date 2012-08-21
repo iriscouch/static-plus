@@ -187,6 +187,9 @@ Builder.prototype.ddoc = function() {
                       , 'created_at': new Date
                       //, 'pages'     : self.pages
                       , 'namespace' : namespace
+                      , 'production_prefix': self.production_prefix
+                      , 'staging_prefix'   : self.staging_prefix
+                      , 'hostname'         : self.hostname
                       }
 
     doc.rewrites = []
@@ -476,11 +479,12 @@ Builder.prototype.seed = function(dir) {
 Builder.prototype.update = function(dir) {
   var self = this
 
-  dir_to_attachments(dir, self.watch, function(er, atts) {
+  dir_to_attachments(dir, self.watch, self.namespace, function(er, atts) {
     if(er)
       return self.die(er)
 
     var ddoc_id = '_design/' + DEFS.staging
+    self.log.debug('Attach updates: %j', Object.keys(atts))
     atts._keep = true
     attach_to_doc(atts, self.couch, self.db, ddoc_id, function(er) {
       if(er)
@@ -524,8 +528,13 @@ function mk_markdown_helper(scope, partials, helpers) {
 }
 
 
-function dir_to_attachments(dir, is_watcher, callback) {
-  console.debug('dir_to_attachments: %j', dir)
+function dir_to_attachments(dir, is_watcher, prefix, callback) {
+  if(!callback) {
+    callback = prefix
+    prefix = null
+  }
+
+  console.debug('dir_to_attachments %j (%j) %s: %j', prefix, is_watcher, dir)
   fs.readdir(dir, function(er, res) {
     if(er)
       return callback(er)
@@ -534,8 +543,8 @@ function dir_to_attachments(dir, is_watcher, callback) {
     async.forEach(res, prep_file, files_prepped)
 
     function prep_file(name, to_async) {
-      var match = name.match(/\.(js|html)$/)
-        , types = {js:'application/javascript', html:'text/html'}
+      var match = name.match(/\.(js|html|css)$/)
+        , types = {js:'application/javascript', html:'text/html', css:'text/css'}
         , type = match && types[match[1]]
 
       if(!type)
@@ -546,6 +555,9 @@ function dir_to_attachments(dir, is_watcher, callback) {
           return to_async(er)
 
         var data = body.toString('base64')
+        if(prefix)
+          name = prefix + '/' + name
+
         atts[name] = { 'content_type':type, 'data':data }
         return to_async(null, atts)
       })
