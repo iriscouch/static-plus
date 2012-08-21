@@ -446,8 +446,8 @@ Builder.prototype.publish = function(doc, callback) {
       output = template(scope, {'partials':partials, 'helpers':helpers})
     } catch (er) {
       self.log.debug('Template error', {'keys':Object.keys(er), 'message':er.message, 'str':er.toString()})
-      throw er
-      return callback(er)
+      output = er.stack + '\n'
+      attachment.content_type = 'text/plain'
     }
   }
 
