@@ -48,7 +48,7 @@ function main(argv) {
   if('prefix' in argv)
     site.production_prefix = argv.prefix || '' // I think Optimist turns "" into 0.
   if('staging-prefix' in argv)
-    site.staging_prefix = argv['staging-prefix']
+    site.staging_prefix = argv['staging-prefix'] || ''
 
   //if(argv.log)
   //  site.log.transports.console.level = argv.log
@@ -59,13 +59,11 @@ function main(argv) {
 
   site.couch = URL.format(couch)
 
-  if(argv.seed)
-    site.seed(argv.seed)
-
-  if(argv.publish)
-    site.update(argv.publish)
-
   site.run()
+  if(argv.seed)
+    site.once('db', function() { site.seed(argv.seed) })
+  if(argv.publish)
+    site.once('ddoc', function() { site.update(argv.publish) })
 }
 
 if(require.main === module)

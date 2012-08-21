@@ -82,9 +82,12 @@ Builder.prototype.run = function() {
   self.on('prep', function() {
     self.set_config()
     self.on('config', function() {
-      self.ddoc()
-      self.on('ddoc', function() {
-        self.follow()
+      self.prep_db()
+      self.on('db', function() {
+        self.ddoc()
+        self.on('ddoc', function() {
+          self.follow()
+        })
       })
     })
   })
@@ -101,7 +104,19 @@ Builder.prototype.prep = function() {
   var self = this
   self.normalize()
 
-  self.log.debug('Prepare couch', {'url':self.couch})
+  self.prep_couch()
+  self.once('couch', function() {
+    self.prep_session()
+    self.once('session', function() {
+      self.fixed('prep')
+    })
+  })
+}
+
+Builder.prototype.prep_couch = function() {
+  var self = this
+
+  self.log.debug('Prepare couch: %s', self.couch)
   request({'url':self.couch, 'json':true}, function(er, res) {
     if(er)
       return self.die(er)
@@ -109,25 +124,31 @@ Builder.prototype.prep = function() {
     if(res.statusCode != 200 || res.body.couchdb != 'Welcome')
       return self.die(new Error('Bad CouchDB url: ' + self.couch))
 
-    var session = self.couch + '/_session'
-    self.log.debug('Check session', {'url':session})
-    request({'url':session, 'json':true}, function(er, res) {
-      if(er)
-        return self.die(er)
+    self.fixed('couch')
+  })
+}
 
-      if(res.statusCode != 200 || !res.body.ok)
-        return self.die(new Error('Bad session response: ' + JSON.stringify(res.body)))
+Builder.prototype.prep_session = function() {
+  var self = this
 
-      if(~ res.body.userCtx.roles.indexOf('_admin'))
-        self.log.debug('Confirmed admin access', {'url':self.couch})
-      else {
-        er = new Error('Not admin')
-        er.admin_fail = true
-        return self.die(er)
-      }
+  var session = self.couch + '/_session'
+  self.log.debug('Check session: %s', session)
+  request({'url':session, 'json':true}, function(er, res) {
+    if(er)
+      return self.die(er)
 
-      self.fixed('prep')
-    })
+    if(res.statusCode != 200 || !res.body.ok)
+      return self.die(new Error('Bad session response: ' + JSON.stringify(res.body)))
+
+    if(~ res.body.userCtx.roles.indexOf('_admin'))
+      self.log.debug('Confirmed admin access', {'url':self.couch})
+    else {
+      er = new Error('Not admin')
+      er.admin_fail = true
+      return self.die(er)
+    }
+
+    self.fixed('session', res.body)
   })
 }
 
@@ -164,21 +185,29 @@ Builder.prototype.set_config = function() {
 }
 
 
-Builder.prototype.ddoc = function() {
+Builder.prototype.prep_db = function() {
   var self = this
 
   var url = self.couch + '/' + self.db
-  self.log.debug('Create db', {'url':url})
+  self.log.debug('Create db: %s', url)
   request.put({'url':url, 'json':true}, function(er, res) {
     if(er)
       return self.die(er)
-    if(res.statusCode != 201 && res.statusCode != 412)
-      return self.die(new Error('Bad create response: ' + JSON.stringify(res.body)))
 
-    var id = '_design/' + DEFS.staging
-    self.log.debug('Create ddoc', {'id':id})
-    txn({'couch':self.couch, 'db':self.db, 'id':id, 'create':true}, build_ddoc, ddoc_built)
+    if(res.statusCode != 201 && res.statusCode != 412)
+      return self.die(new Error('Bad DB create response: ' + JSON.stringify(res.body)))
+
+    self.fixed('db')
   })
+}
+
+
+Builder.prototype.ddoc = function() {
+  var self = this
+
+  var id = '_design/' + DEFS.staging
+  self.log.debug('Create ddoc: %s', id)
+  txn({'couch':self.couch, 'db':self.db, 'id':id, 'create':true}, build_ddoc, ddoc_built)
 
   function build_ddoc(doc, to_txn) {
     var namespace = self.namespace
@@ -214,7 +243,6 @@ Builder.prototype.ddoc = function() {
     async.forEach(attachments, attach_file, files_attached)
 
     function attach_file(name, to_async) {
-      console.log('trying %j', {name:name, def:require._defaultable})
       var path = __dirname + '/lib/' + name
       fs.readFile(path, function(er, body) {
         if(er)
@@ -303,7 +331,7 @@ Builder.prototype.doc = function(doc) {
     self.attachments[name].url = self.couch + '/' + self.db + '/' + encodeURIComponent(doc._id) + '/' + name
   }
 
-  if(doc.template && ('path' in doc))
+  if('path' in doc)
     self.pages_queue[doc.path] = doc
 }
 
@@ -375,8 +403,9 @@ Builder.prototype.publish = function(doc, callback) {
     }
   }
 
-  var tmpl_id    = doc.template + '.html'
-  var attachment = self.attachments[tmpl_id]
+  var tmpl_name  = doc.template || 'page'
+    , tmpl_id    = tmpl_name + '.html'
+    , attachment = self.attachments[tmpl_id]
     , template   = attachment && attachment.handlebars
     , body       = attachment && attachment.body
 
@@ -410,15 +439,14 @@ Builder.prototype.publish = function(doc, callback) {
       partials[name] = att.handlebars || att.body
     })
 
-    self.log.warn('I should set partials')
-    self.log.warn('%s', util.inspect(self.attachments,0,10))
-    self.log.warn('%s', util.inspect(partials,0,10))
     helpers.markdown = mk_markdown_helper(scope, partials, helpers)
+    partials = helpers = {} // XXX
 
     try {
       output = template(scope, {'partials':partials, 'helpers':helpers})
     } catch (er) {
       self.log.debug('Template error', {'keys':Object.keys(er), 'message':er.message, 'str':er.toString()})
+      throw er
       return callback(er)
     }
   }
@@ -470,7 +498,9 @@ Builder.prototype.seed = function(dir) {
     attach_to_doc(atts, self.couch, self.db, 'seed', function(er) {
       if(er)
         return self.die(er)
+
       self.log.info('Seed complete: %j', Object.keys(atts))
+      self.emit('seed')
     })
   })
 }
@@ -534,7 +564,6 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
     prefix = null
   }
 
-  console.debug('dir_to_attachments %j (%j) %s: %j', prefix, is_watcher, dir)
   fs.readdir(dir, function(er, res) {
     if(er)
       return callback(er)
@@ -572,7 +601,6 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
       var events = {}
 
       fs.watch(dir, {'persistent':true}, function(ev, name) {
-        console.debug('FS event %j: %j', ev, name)
         var key = ev + ':' + name
         events[key] = {'ev':ev, 'name':name}
 
@@ -592,7 +620,6 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
     }
 
     function change(ev, name) {
-      console.info('change %j %j', ev, name)
       if(ev != 'change')
         return
 
@@ -600,6 +627,9 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
       prep_file(name, function(er) {
         if(er)
           throw er // XXX
+
+        if(prefix)
+          name = prefix + '/' + name
 
         if(!atts[name])
           return // The name was ignored.
