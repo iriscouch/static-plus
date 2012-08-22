@@ -333,8 +333,10 @@ Builder.prototype.doc = function(doc) {
     self.attachments[name].url = self.couch + '/' + self.db + '/' + encodeURIComponent(doc._id) + '/' + name
   }
 
-  if('path' in doc)
+  if('path' in doc) {
+    doc.path = doc.path.replace(/^\/*/, '')
     self.pages_queue[doc.path] = doc
+  }
 }
 
 
