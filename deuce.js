@@ -32,6 +32,7 @@ var URL = require('url')
 var txn = require('txn')
 var GFM = require('github-flavored-markdown')
 var path = require('path')
+var mime = require('mime')
 var util = require('util')
 var async = require('async')
 var fixed = require('fixed-event')
@@ -576,8 +577,7 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
 
     function prep_file(name, to_async) {
       var match = name.match(/\.(js|html|css)$/)
-        , types = {js:'application/javascript', html:'text/html', css:'text/css'}
-        , type = match && types[match[1]]
+        , type = match && mime.lookup(match[1])
 
       if(!type)
         return to_async()
