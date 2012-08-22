@@ -378,7 +378,7 @@ Builder.prototype.publish = function(doc, callback) {
     return async.forEach(stubs, get_stub, stubs_got)
 
   function get_stub(stub, to_async) {
-    self.log.debug('Get stub: %j', stub)
+    self.log.debug('Get stub for %j: %s', doc.path, stub.url)
     request({'url':stub.url}, function(er, res) {
       if(er)
         return to_async(er)
@@ -438,12 +438,15 @@ Builder.prototype.publish = function(doc, callback) {
     delete scope.markdown
 
     var partials = {}
-      , helpers  = {}
-
     Object.keys(self.attachments).forEach(function(name) {
       var att = self.attachments[name]
       name = name.replace(/\..*$/, '')
       partials[name] = att.handlebars || att.body
+    })
+
+    var helpers  = {}
+    Object.keys(handlebars.helpers).forEach(function(name) {
+      helpers[name] = handlebars.helpers[name]
     })
 
     helpers.markdown = mk_markdown_helper(scope, partials, helpers)
@@ -467,17 +470,17 @@ Builder.prototype.publish = function(doc, callback) {
     var name     = (self.namespace + '/' + doc.path).replace(/\/+$/, '')
       , exists   = (name in ddoc._attachments)
 
-    self.log.debug('Attach', {'name':name, 'exists':exists, 'length':output.length})
+    self.log.debug('Attach %j exists=%j length=%j', name, exists, output.length)
 
     ddoc._attachments[name] = {}
     ddoc._attachments[name].data = new Buffer(output).toString('base64')
     ddoc._attachments[name].content_type = attachment.content_type
 
     // And again for the trailing slash path.
-    name += '/'
-    ddoc._attachments[name] = {}
-    ddoc._attachments[name].data = new Buffer(output).toString('base64')
-    ddoc._attachments[name].content_type = attachment.content_type
+    //name += '/'
+    //ddoc._attachments[name] = {}
+    //ddoc._attachments[name].data = new Buffer(output).toString('base64')
+    //ddoc._attachments[name].content_type = attachment.content_type
 
     return to_txn()
   }
