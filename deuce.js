@@ -367,15 +367,18 @@ Builder.prototype.push = function() {
 Builder.prototype.publish = function(doc, callback) {
   var self = this
 
+  self.log.debug('Publish: %s', doc._id)
+
   // All attachments must be known.
   var attachments = Object.keys(self.attachments).map(function(A) { return self.attachments[A] })
     , stubs = attachments.filter(function(A) { return A.stub })
 
-  self.log.debug('Publish', {'id':doc._id, 'stubs_count':stubs.length})
+  self.log.debug('stubs.length: %j', stubs.length)
   if(stubs.length > 0)
     return async.forEach(stubs, get_stub, stubs_got)
 
   function get_stub(stub, to_async) {
+    self.log.debug('Get stub: %j', stub)
     request({'url':stub.url}, function(er, res) {
       if(er)
         return to_async(er)
