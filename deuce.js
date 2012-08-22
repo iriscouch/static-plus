@@ -444,6 +444,7 @@ Builder.prototype.publish = function(doc, callback) {
     })
 
     helpers.markdown = mk_markdown_helper(scope, partials, helpers)
+    helpers.link     = link_helper
 
     try {
       output = template(scope, {'partials':partials, 'helpers':helpers})
@@ -561,6 +562,11 @@ function mk_markdown_helper(scope, partials, helpers) {
     var template = handlebars.compile(body)
     return template(scope, {'partials':partials, 'helpers':helpers})
   }
+}
+
+
+function link_helper(context) {
+  return util.format('<a href="%s">%s</a>', context.hash.to, context.hash.text)
 }
 
 
