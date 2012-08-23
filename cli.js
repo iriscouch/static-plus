@@ -40,6 +40,11 @@ function main(argv) {
   if(argv.help || !couch || !db || !host)
     return OPTS.showHelp()
 
+  if(argv.cycle) {
+    console.log('push_wait = %j', argv.cycle)
+    Deuce = Deuce.defaults({'push_wait': +argv.cycle})
+  }
+
   var site = new Deuce
   site.db  = db
   site.hostname = host

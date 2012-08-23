@@ -17,6 +17,7 @@ require('defaultable')(module,
   , 'production': 'SP-production'
   , 'staging'   : 'SP-staging'
   , 'template_name': 'page'
+  , 'push_wait' : 500 // milliseconds
   // 'autostart': false
   //, 'autostop' : false
   //, 'partials' : {}
