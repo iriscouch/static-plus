@@ -64,9 +64,19 @@ function main(argv) {
 
   site.couch = URL.format(couch)
 
-  site.run()
-  if(argv.seed)
-    site.once('db', function() { site.seed(argv.seed) })
+  if(!argv.seed)
+    site.run()
+  else
+    site.run('db', function() {
+      console.debug('DB is ready; update seed document')
+      site.seed(argv.seed)
+      site.on('seed', function() {
+        // Sort of re-implement the end of the run() method.
+        site.ddoc()
+        site.on('ddoc', function() { site.follow() })
+      })
+    })
+
   if(argv.publish)
     site.once('ddoc', function() { site.update(argv.publish) })
 }

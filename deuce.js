@@ -78,17 +78,32 @@ function Builder () {
 }
 
 
-Builder.prototype.run = function() {
+Builder.prototype.run = function(up_to, callback) {
   var self = this
+
+  if(typeof up_to != 'string' || typeof callback != 'function')
+    up_to = null
 
   self.prep()
   self.on('prep', function() {
+    if(up_to == 'prep')
+      return callback()
+
     self.set_config()
     self.on('config', function() {
+      if(up_to == 'config')
+        return callback()
+
       self.prep_db()
       self.on('db', function() {
+        if(up_to == 'db')
+          return callback()
+
         self.ddoc()
         self.on('ddoc', function() {
+          if(up_to == 'ddoc')
+            return callback()
+
           self.follow()
         })
       })
