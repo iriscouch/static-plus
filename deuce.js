@@ -75,7 +75,7 @@ function Builder () {
   self.namespace = DEFS.namespace
   self.is_read_only = false
 
-  self.caught_up = false
+  self.caught_up = 0
 }
 
 
@@ -311,7 +311,7 @@ Builder.prototype.follow = function() {
   self.feed.inactivity_ms = 24 * 60 * 60 * 1000 // 1 day
   //self.feed.inactivity_ms = 5 * 1000 // XXX
 
-  self.feed.filter = function(doc) { return ! doc._id.match(/^_design\//) }
+  //self.feed.filter = function(doc) { return ! doc._id.match(/^_design\//) }
 
   process.nextTick(function() { self.feed.follow() })
 
@@ -320,17 +320,20 @@ Builder.prototype.follow = function() {
   })
 
   self.feed.on('catchup', function(seq) {
-    self.log.debug('Feed caught up', {'id':self.id, 'seq':seq})
-    self.caught_up = true
-    self.push()
+    self.log.debug('Feed caught up for %j: %d', self.id, seq)
+    self.caught_up = seq
+    //self.push()
   })
 
   self.feed.on('change', function(change) {
     self.log.debug('Update', change)
 
-    self.doc(change.doc)
+    var match = change.id.match(/^_design\//)
+    if(!match)
+      self.doc(change.doc)
 
-    if(self.caught_up)
+    // If this is the "catch-up" event, or if this is any document update after the catch-up, then publish.
+    if(self.caught_up == change.seq || (self.caught_up && !match))
       self.push()
   })
 }
