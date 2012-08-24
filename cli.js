@@ -76,7 +76,7 @@ function main(argv) {
     })
 
   if(argv.publish)
-    site.once('ddoc', function() { site.update(argv.publish) })
+    site.on('ddoc', function() { site.update(argv.publish) })
 }
 
 if(require.main === module)
