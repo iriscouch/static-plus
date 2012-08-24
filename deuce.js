@@ -35,6 +35,7 @@ var GFM = require('github-flavored-markdown')
 var path = require('path')
 var mime = require('mime')
 var util = require('util')
+var less = require('less')
 var async = require('async')
 var fixed = require('fixed-event')
 var follow = require('follow')
@@ -606,8 +607,12 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
     async.forEach(res, prep_file, files_prepped)
 
     function prep_file(name, to_async) {
-      var match = name.match(/\.(js|html|css|eot|svg|ttf|woff)$/)
-        , type = match && mime.lookup(match[1])
+      var match = name.match(/\.(js|html|css|less|eot|svg|ttf|woff)$/)
+        , extension = match && match[1]
+        , type = match && mime.lookup(extension)
+
+      if(extension == 'less')
+        type = mime.lookup('foo.css')
 
       if(!type)
         return to_async()
@@ -616,12 +621,41 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
         if(er)
           return to_async(er)
 
-        var data = body.toString('base64')
-        if(prefix)
-          name = prefix + '/' + name
+        if(extension != 'less')
+          done()
+        else {
+          // Less seems to throw sometimes.
+          try {
+            less.render(body.toString('utf8'), less_result)
+          } catch (er) {
+            self.log.error('Less error: %s', er.message)
+            less_result(er)
+          }
+        }
 
-        atts[name] = { 'content_type':type, 'data':data }
-        return to_async(null, atts)
+        function less_result(er, css) {
+          if(er) {
+            self.log.error('LESS error: %s', er.message)
+            //return to_async(er)
+            css = er.stack || er.message || '<Unknown less error>'
+          }
+
+          self.log.debug('Built %s to CSS: %d -> %d bytes', name, body.length, css.length)
+          body = new Buffer(css)
+          done()
+        }
+
+        function done() {
+          var data = body.toString('base64')
+
+          name = name.replace(/\.less$/, '.css')
+          if(prefix)
+            name = prefix + '/' + name
+
+          self.log.debug('Prepared: %s', name)
+          atts[name] = { 'content_type':type, 'data':data }
+          return to_async(null, atts)
+        }
       })
     }
 
