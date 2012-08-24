@@ -619,10 +619,11 @@ function link_helper(context) {
 }
 
 function button_helper(context) {
-  var label = context.hash.label
+  var lines = boxed(context.hash.label)
+    , label = lines.join('<br>')
+    , type = context.hash.type || 'button'
 
-  return '<a type="button">' + lines.join('<br>') + '</button>'
-
+  return util.format('<button type=%j>%s</button>', type, label)
 }
 
 
@@ -791,6 +792,13 @@ function not_in_list(list) {
   function not_filter(element) {
     return ! in_list(element, list)
   }
+}
+
+function boxed(str) {
+  return [ '+' + dashes(str) + '+'
+         , '|' + str         + '|'
+         , '+' + dashes(str) + '+'
+         ]
 }
 
 function dashes(str) {
