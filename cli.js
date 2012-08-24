@@ -70,10 +70,10 @@ function main(argv) {
     site.run('db', function() {
       console.debug('DB is ready; update seed document')
       site.seed(argv.seed)
-      site.on('seed', function() {
+      site.once('seed', function() {
         // Sort of re-implement the end of the run() method.
         site.ddoc()
-        site.on('ddoc', function() { site.follow() })
+        site.once('ddoc', function() { site.follow() })
       })
     })
 
