@@ -190,7 +190,7 @@ Builder.prototype.set_config = function() {
       if(res.statusCode != 200)
         return to_async(new Error('Bad config response: ' + JSON.stringify(res.body)))
 
-      self.log.debug('Set config', {'section':cfg[0], 'key':cfg[1], 'val':cfg[2]})
+      self.log.debug('Set config %s/%s = %j',cfg[0], cfg[1], cfg[2])
       to_async()
     })
   }
@@ -550,7 +550,7 @@ Builder.prototype.update = function(dir) {
       if(er)
         return self.die(er)
 
-      self.log.info('Publish complete')
+      self.log.info('Update resources: complete')
     })
   })
 }
