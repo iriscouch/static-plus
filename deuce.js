@@ -381,7 +381,10 @@ Builder.prototype.push = function() {
   }
 
   self.log.debug('Stubs remaining: %j', stubs.length)
-  return async.forEach(stubs, get_stub, stubs_got)
+  if(stubs.length == 0)
+    return self.publish()
+  else
+    return async.forEach(stubs, get_stub, stubs_got)
 
   function get_stub(stub, to_async) {
     self.log.debug('Get stub: %s', stub.url)
