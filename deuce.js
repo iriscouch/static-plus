@@ -294,7 +294,7 @@ Builder.prototype.ddoc = function() {
     if(result.tries > 1)
       self.log.warn('Multiple updates (conflicts) to store metadata', {'target':self.target, 'tries':result.tries})
 
-    self.fixed('ddoc')
+    self.emit('ddoc')
   }
 }
 
@@ -305,11 +305,17 @@ Builder.prototype.follow = function() {
   var db_url = self.couch + '/' + self.db
   self.log.debug('Follow', {'url':db_url})
 
+  if(self.feed) {
+    self.log.debug('Stop old feed')
+    self.feed.stop()
+    self.caught_up = 0
+    self.attachments = {}
+  }
+
   self.feed = new follow.Feed
   self.feed.db = db_url
   self.feed.include_docs = true
-  self.feed.inactivity_ms = 24 * 60 * 60 * 1000 // 1 day
-  //self.feed.inactivity_ms = 5 * 1000 // XXX
+  self.feed.inactivity_ms = 1 * 60 * 60 * 1000 // 1 hour
 
   //self.feed.filter = function(doc) { return ! doc._id.match(/^_design\//) }
 

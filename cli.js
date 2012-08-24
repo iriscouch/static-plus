@@ -68,13 +68,11 @@ function main(argv) {
     site.run()
   else
     site.run('db', function() {
+      // Sort of re-implement the end of the run() method.
       console.debug('DB is ready; update seed document')
       site.seed(argv.seed)
-      site.once('seed', function() {
-        // Sort of re-implement the end of the run() method.
-        site.ddoc()
-        site.once('ddoc', function() { site.follow() })
-      })
+      site.on('seed', function() { site.ddoc() })
+      site.on('ddoc', function() { site.follow() })
     })
 
   if(argv.publish)
