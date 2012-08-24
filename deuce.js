@@ -332,7 +332,7 @@ Builder.prototype.follow = function() {
   })
 
   self.feed.on('change', function(change) {
-    self.log.debug('Update', change)
+    self.log.debug('Update %d: %s', change.seq, change.id)
 
     var match = change.id.match(/^_design\//)
     if(!match)
