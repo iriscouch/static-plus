@@ -605,10 +605,9 @@ function mk_markdown_helper(scope, partials, helpers) {
 
 function link_helper(context) {
   var to = context.hash.to
-    , text = context.hash.text
     , type = context.hash.type || ""
 
-  var link = context.hash.text
+  var link = context.hash.label || context.hash.text // "text" is deprecated.
   if(context.hash.type == 'button')
     link = [ '+' + dashes(link) + '+'
            , '|' + link         + '|'
