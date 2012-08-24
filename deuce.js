@@ -362,43 +362,25 @@ Builder.prototype.doc = function(doc) {
 
 Builder.prototype.push = function() {
   var self = this
-
-  var paths = Object.keys(self.pages_queue)
-  self.log.debug('Push', {'count':paths.length, 'paths':paths})
-
-  async.forEach(paths, push_path, paths_pushed)
-
-  function push_path(path, to_async) {
-    self.publish(self.pages_queue[path], to_async)
-  }
-
-  function paths_pushed(er) {
-    if(er)
-      return self.die(er)
-
-    if(paths.length > 0) {
-      self.log.debug('Push complete')
-      self.emit('push')
-    }
-  }
-}
-
-
-Builder.prototype.publish = function(doc, callback) {
-  var self = this
-
-  self.log.debug('Publish: %s', doc._id)
+  self.log.debug('Push')
 
   // All attachments must be known.
   var attachments = Object.keys(self.attachments).map(function(A) { return self.attachments[A] })
     , stubs = attachments.filter(function(A) { return A.stub })
+                         //.filter(function(A) { return ! A.is_fetching })
 
-  self.log.debug('stubs.length: %j', stubs.length)
-  if(stubs.length > 0)
-    return async.forEach(stubs, get_stub, stubs_got)
+  if(stubs.length == 0) {
+    self.log.debug('All stubs fetched, time for the publish run')
+    return self.publish()
+  }
+
+  self.log.debug('Stubs remaining: %j', stubs.length)
+  return async.forEach(stubs, get_stub, stubs_got)
 
   function get_stub(stub, to_async) {
-    self.log.debug('Get stub for %j: %s', doc.path, stub.url)
+    self.log.debug('Get stub: %s', stub.url)
+    stub.is_fetching = true
+
     request({'url':stub.url}, function(er, res) {
       if(er)
         return to_async(er)
@@ -406,14 +388,15 @@ Builder.prototype.publish = function(doc, callback) {
       if(res.statusCode != 200)
         return to_async(new Error('Bad code '+res.statusCode+' ' + JSON.stringify(res.body)))
 
-      delete stub.stub
       stub.body = res.body
+      delete stub.stub
+      delete stub.is_fetching
 
       var template_types = [ 'text/html' ]
       if(!~ template_types.indexOf(stub.content_type))
         self.log.debug('Not a template type', {'type':stub.content_type})
       else {
-        self.log.debug('Compile template', {'type':stub.content_type})
+        self.log.debug('Compile template: %s', stub.content_type)
         stub.handlebars = handlebars.compile(stub.body)
       }
 
@@ -423,95 +406,124 @@ Builder.prototype.publish = function(doc, callback) {
 
   function stubs_got(er) {
     if(er)
-      callback(er)
-    else {
-      self.log.debug('Re-run publish with no more stubs', {'count':stubs.length})
-      self.publish(doc, callback)
-    }
+      return self.die(er)
+
+    self.log.debug('Trigger publish with no more stubs')
+    self.publish()
   }
+}
 
-  var tmpl_name  = doc.template || DEFS.template_name
-    , tmpl_id    = tmpl_name + '.html'
-    , attachment = self.attachments[tmpl_id]
-    , template   = attachment && attachment.handlebars
-    , body       = attachment && attachment.body
 
-  if(!template && !body) {
-    self.log.warn('No attachment for template', {'template':template})
-    return callback()
-  }
-
-  var output = null
-  if(!template)
-    output = body
-  else {
-    // Build the scope for the template.
-
-    // Lowest pri: all docs by id
-    var scope = JSON.parse(JSON.stringify(self.docs))
-
-    // Next pri: the contents of this document.
-    for (var key in doc)
-      scope[key] = JSON.parse(JSON.stringify(doc[key]))
-
-    // Highest pri: The markdown helper.
-    delete scope.markdown
-
-    var partials = {}
-    Object.keys(self.attachments).forEach(function(name) {
-      var att = self.attachments[name]
-      name = name.replace(/\..*$/, '')
-      partials[name] = att.handlebars || att.body
-    })
-
-    var helpers  = {}
-    Object.keys(handlebars.helpers).forEach(function(name) {
-      helpers[name] = handlebars.helpers[name]
-    })
-
-    helpers.markdown = mk_markdown_helper(scope, partials, helpers)
-    helpers.link     = link_helper
-
-    try {
-      output = template(scope, {'partials':partials, 'helpers':helpers})
-    } catch (er) {
-      self.log.debug('Template error', {'keys':Object.keys(er), 'message':er.message, 'str':er.toString()})
-      output = er.stack + '\n'
-      attachment.content_type = 'text/plain'
-    }
-  }
+Builder.prototype.publish = function() {
+  var self = this
 
   var ddoc_id = '_design/' + DEFS.staging
-  txn({'couch':self.couch, 'db':self.db, 'id':ddoc_id}, attach_output, output_attached)
+    , paths = Object.keys(self.pages_queue)
 
-  function attach_output(ddoc, to_txn) {
+  self.log.debug('Publish time: %d updates', paths.length)
+  txn({'couch':self.couch, 'db':self.db, 'id':ddoc_id}, attach_pages, pages_attached)
+
+  function attach_pages(ddoc, to_txn) {
     ddoc._attachments = ddoc._attachments || {}
 
-    var name     = (self.namespace + '/' + doc.path).replace(/\/+$/, '')
-      , exists   = (name in ddoc._attachments)
+    // Render each document's page and enqueue it for publishing.
+    var new_attachments = self.process_pages_queue()
 
-    self.log.debug('Attach %j exists=%j length=%j', name, exists, output.length)
+    Object.keys(new_attachments).forEach(function(path) {
+      var new_attachment = new_attachments[path]
+        , existing = ddoc._attachments[path]
 
-    ddoc._attachments[name] = {}
-    ddoc._attachments[name].data = new Buffer(output).toString('base64')
-    ddoc._attachments[name].content_type = attachment.content_type
+      path = self.namespace + '/' + path
+      path = path.replace(/\/+$/, '')
 
-    // And again for the trailing slash path.
-    //name += '/'
-    //ddoc._attachments[name] = {}
-    //ddoc._attachments[name].data = new Buffer(output).toString('base64')
-    //ddoc._attachments[name].content_type = attachment.content_type
+      //self.log.warn('=-=-=-=-=-=-=-=')
+      //self.log.warn('Should attach: %s\n%s', path, util.inspect(new_attachment))
+      //self.log.warn('_attachments: %j', existing)
+      //self.log.warn('=-=-=-=-=-=-=-=')
+
+      if(!existing) {
+        self.log.debug('Add attachment: %s', path)
+        ddoc._attachments[path] = {}
+        ddoc._attachments[path].content_type = new_attachment.content_type
+        ddoc._attachments[path].data = new Buffer(new_attachment.data).toString('base64')
+      }
+
+      else
+        return to_txn(new Error('Unknown attachment situation: ' + path))
+
+    })
 
     return to_txn()
   }
 
-  function output_attached(er) {
+  function pages_attached(er) {
     if(er)
-      return callback(er)
+      return self.die(er)
 
-    self.log.debug('Finished attachments', {'id':doc._id})
-    callback()
+    self.log.info('Finish publish')
+    self.emit('publish')
   }
+}
+
+
+Builder.prototype.process_pages_queue = function() {
+  var self = this
+
+  var result = {}
+  Object.keys(self.pages_queue).forEach(function(path) {
+    var doc = self.pages_queue[path]
+    delete self.pages_queue[path]
+
+    var tmpl_name  = doc.template || DEFS.template_name
+      , tmpl_id    = tmpl_name + '.html'
+      , attachment = self.attachments[tmpl_id]
+      , template   = attachment && attachment.handlebars
+      , body       = attachment && attachment.body
+
+    if(!template && !body)
+      return self.log.warn('No attachment for template: %j', doc._id)
+
+    result[path] = {}
+    result[path].content_type = attachment.content_type
+    result[path].data = body
+
+    if(template) {
+      // Build the scope for the template.
+
+      // Lowest pri: all docs by id
+      var scope = JSON.parse(JSON.stringify(self.docs))
+
+      // Next pri: the contents of this document.
+      for (var key in doc)
+        scope[key] = JSON.parse(JSON.stringify(doc[key]))
+
+      // Highest pri: The markdown helper.
+      delete scope.markdown
+
+      var partials = {}
+      Object.keys(self.attachments).forEach(function(name) {
+        var att = self.attachments[name]
+        name = name.replace(/\..*$/, '')
+        partials[name] = att.handlebars || att.body
+      })
+
+      var helpers = handlebars_helpers()
+      helpers.markdown = mk_markdown_helper(scope, partials, helpers)
+      helpers.link     = link_helper
+      helpers.button   = button_helper
+
+      self.log.debug('Run template %s: %s', tmpl_id, doc._id)
+      try {
+        result[path].data = template(scope, {'partials':partials, 'helpers':helpers})
+      } catch (er) {
+        self.log.debug('Template error: %s', er.message)
+        result[path].data = er.stack + '\n'
+        result[path].content_type = 'text/plain'
+      }
+    } // if(template)
+  })
+
+  return result
 }
 
 
@@ -520,7 +532,7 @@ Builder.prototype.seed = function(dir) {
   self.normalize()
 
   self.log.debug('Seed: %j', dir)
-  dir_to_attachments(dir, self.watch, function(er, atts) {
+  dir_to_attachments.call(self, dir, self.watch, function(er, atts) {
     if(er)
       return self.die(er)
 
@@ -539,7 +551,7 @@ Builder.prototype.seed = function(dir) {
 Builder.prototype.update = function(dir) {
   var self = this
 
-  dir_to_attachments(dir, self.watch, self.namespace, function(er, atts) {
+  dir_to_attachments.call(self, dir, self.watch, self.namespace, function(er, atts) {
     if(er)
       return self.die(er)
 
@@ -592,11 +604,31 @@ function mk_markdown_helper(scope, partials, helpers) {
 
 
 function link_helper(context) {
-  return util.format('<a href="%s">%s</a>', context.hash.to, context.hash.text)
+  var to = context.hash.to
+    , text = context.hash.text
+    , type = context.hash.type || ""
+
+  var link = context.hash.text
+  if(context.hash.type == 'button')
+    link = [ '+' + dashes(link) + '+'
+           , '|' + link         + '|'
+           , '+' + dashes(link) + '+'
+           ].join('<br>')
+
+  return util.format('<a class=%j href="%s">%s</a>', type, context.hash.to, link)
+}
+
+function button_helper(context) {
+  var label = context.hash.label
+
+  return '<a type="button">' + lines.join('<br>') + '</button>'
+
 }
 
 
 function dir_to_attachments(dir, is_watcher, prefix, callback) {
+  var self = this
+
   if(!callback) {
     callback = prefix
     prefix = null
@@ -691,18 +723,19 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
 
     function change(ev, name) {
       if(ev != 'change')
-        return
+        return self.log.debug('Ignore event: %s %s', ev, name)
 
       delete atts[name]
       prep_file(name, function(er) {
         if(er)
           throw er // XXX
 
+        name = name.replace(/\.less$/, '.css')
         if(prefix)
           name = prefix + '/' + name
 
         if(!atts[name])
-          return // The name was ignored.
+          return self.log.debug('Name was ignored: %s', name)
 
         var updates = {'_keep':true}
         updates[name] = atts[name]
@@ -738,6 +771,15 @@ function attach_to_doc(atts, couch, db, id, callback) {
 //
 
 
+function handlebars_helpers() {
+  var result = {}
+  Object.keys(handlebars.helpers).forEach(function(key) {
+    result[key] = handlebars.helpers[key]
+  })
+  return result
+}
+
+
 function in_list(element, list) {
   for(var i = 0; i < list.length; i++)
     if(element === list[i])
@@ -749,6 +791,13 @@ function not_in_list(list) {
   function not_filter(element) {
     return ! in_list(element, list)
   }
+}
+
+function dashes(str) {
+  var result = ''
+  for(var i = 0; i < str.length; i++)
+    result += '-'
+  return result
 }
 
 }) // defaultable
