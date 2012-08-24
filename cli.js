@@ -81,7 +81,3 @@ function main(argv) {
 
 if(require.main === module)
   main(OPTS.argv)
-//  , lib = require('./lib').defaults({ 'args': ['couch', 'db', 'hostname']
-//                                    , 'describe': { 'prefix': 'Production hostname prefix (default "www.")'
-//                                                  }
-//                                    })
