@@ -254,6 +254,8 @@ Builder.prototype.ddoc = function() {
       delete doc.validate_doc_update
     else
       doc.validate_doc_update = "" + function(newDoc, oldDoc, userCtx, secObj) {
+        if(~userCtx.roles.indexOf('_admin') || ~userCtx.roles.indexOf('editor'))
+          return log('Allow change from ' + userCtx.name)
         throw {'forbidden':'This Static+ database is read-only'}
       }
 

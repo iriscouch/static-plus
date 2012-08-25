@@ -28,6 +28,8 @@ var OPTS = optimist.describe('prefix', 'Production hostname prefix')
                    .default('staging-prefix', 'staging.')
                    .describe('seed', 'Seed build data from a directory')
                    .describe('publish', 'Push website attachments from a directory')
+                   .describe('ro', 'Make the site read-only except _admin and "editor" roles')
+                   .boolean('ro')
                    .describe('watch', 'Continue updating seed or publish directory')
                    .boolean('watch')
                    .usage('$0 <couch> <db> <domain> [--seed=...] [--publish=...]')
@@ -49,6 +51,7 @@ function main(argv) {
   site.db  = db
   site.hostname = host
   site.watch    = argv.watch
+  site.is_read_only = argv.ro
 
   if('prefix' in argv)
     site.production_prefix = argv.prefix || '' // I think Optimist turns "" into 0.
