@@ -604,12 +604,26 @@ Builder.prototype.die = function(er) {
 
 function mk_markdown_helper(scope, partials, helpers) {
   return function doc_markdown(body, extra) {
+    if(typeof body == 'object' && typeof extra == 'undefined') {
+      extra = body
+      body = null
+    }
+
+    var opts = (extra && extra.hash) || {}
+    if(opts.key)
+      body = scope[opts.key]
+
     if(typeof body != 'string')
       return ''
 
     body = GFM.parse(body)
     var template = handlebars.compile(body)
-    return template(scope, {'partials':partials, 'helpers':helpers})
+    var result = template(scope, {'partials':partials, 'helpers':helpers})
+
+    if(opts.key)
+      result = util.format('<div class="edit" data-id=%j data-key=%j>%s</div>', scope._id, opts.key, result)
+
+    return result
   }
 }
 
