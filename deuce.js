@@ -522,6 +522,7 @@ Builder.prototype.process_pages_queue = function() {
       helpers.markdown = mk_markdown_helper(scope, partials, helpers)
       helpers.link     = link_helper
       helpers.button   = button_helper
+      helpers.css_class = css_class_helper
 
       self.log.debug('Run template %s: %s', tmpl_id, doc._id)
       try {
@@ -648,6 +649,12 @@ function button_helper(context) {
     , type = context.hash.type || 'button'
 
   return util.format('<button type=%j>%s</button>', type, label)
+}
+
+
+function css_class_helper(data, context) {
+  data = data || 'landing'
+  return data.replace(/[^\w]/g, '_')
 }
 
 
