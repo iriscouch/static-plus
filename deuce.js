@@ -645,10 +645,11 @@ function link_helper(context) {
 
 function button_helper(context) {
   var lines = boxed(context.hash.label)
+    , clas  = context.hash.class || ''
     , label = lines.join('<br>')
     , type = context.hash.type || 'button'
 
-  return util.format('<button type=%j>%s</button>', type, label)
+  return util.format('<button type=%j class=%j>%s</button>', type, clas, label)
 }
 
 
