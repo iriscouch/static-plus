@@ -175,8 +175,9 @@ Builder.prototype.prep_session = function() {
 Builder.prototype.set_config = function() {
   var self = this
 
-  var config = [ [ 'vhosts', self.production_prefix + self.hostname, '/'+self.db+'/_design/'+DEFS.production+'/_rewrite' ]
-               , [ 'vhosts', self.staging_prefix    + self.hostname, '/'+self.db+'/_design/'+DEFS.staging   +'/_rewrite' ]
+  // No production vhost yet, in case it is already in use serving another Couch app.
+  var config = [ [ 'vhosts', self.staging_prefix    + self.hostname, '/'+self.db+'/_design/'+DEFS.staging   +'/_rewrite' ]
+             //, [ 'vhosts', self.production_prefix + self.hostname, '/'+self.db+'/_design/'+DEFS.production+'/_rewrite' ]
                , [ 'httpd' , 'secure_rewrites'        , 'false'                                             ]
                ]
 
