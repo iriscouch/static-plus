@@ -433,13 +433,16 @@ Builder.prototype.publish = function() {
     , paths = Object.keys(self.pages_queue)
 
   self.log.debug('Publish time: %d updates', paths.length)
+
+  var new_attachments = self.process_pages_queue()
+  //console.warn('new_attachments: %s', util.inspect(new_attachments))
+
   txn({'couch':self.couch, 'db':self.db, 'id':ddoc_id}, attach_pages, pages_attached)
 
   function attach_pages(ddoc, to_txn) {
     ddoc._attachments = ddoc._attachments || {}
 
     // Render each document's page and enqueue it for publishing.
-    var new_attachments = self.process_pages_queue()
 
     Object.keys(new_attachments).forEach(function(path) {
       var new_attachment = new_attachments[path]
