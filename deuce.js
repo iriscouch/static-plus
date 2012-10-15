@@ -458,14 +458,13 @@ Builder.prototype.publish = function() {
 
       if(!existing) {
         self.log.debug('Add attachment: %s', path)
-        ddoc._attachments[path] = {}
-        ddoc._attachments[path].content_type = new_attachment.content_type
-        ddoc._attachments[path].data = new Buffer(new_attachment.data).toString('base64')
+        ddoc._attachments[path] = { 'content_type': new_attachment.content_type
+                                  , 'data'        : new Buffer(new_attachment.data).toString('base64')
+                                  }
       }
 
       else
         return to_txn(new Error('Unknown attachment situation: ' + path))
-
     })
 
     return to_txn()
