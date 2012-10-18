@@ -379,8 +379,38 @@ Builder.prototype.doc = function(doc) {
 Builder.prototype.promote = function(ddoc) {
   var self = this
 
-  self.log.info('Staging ddoc requests promotion: %j', ddoc._id)
-  self.log.debug('static_;lus: %j', ddoc.static_plus)
+  self.log.info('Promote to production: %s %s', ddoc._id, ddoc._rev)
+  var pro_id = '_design/' + DEFS.production
+    , pro_url = self.couch + '/' + self.db + '/' + encID(pro_id)
+    , dev_url = self.couch + '/' + self.db + '/' + encID(ddoc._id) + '?rev' + ddoc._rev
+
+  self.log.debug('Promotion source: %s', dev_url)
+  request({'url':pro_url, 'json':true}, function(er, res) {
+    if(er)
+      return self.die(er)
+
+    var rev = null
+    if(res.statusCode == 404)
+      self.log.debug('Create new production ddoc')
+    else if(res.statusCode != 200)
+      return self.die(new Error('Bad response for production ddoc: ' + JSON.stringify(res.body)))
+    else
+      rev = res.body._rev
+
+    var pro_path = pro_id
+    if(rev)
+      pro_path += '?rev=' + rev
+
+    self.log.debug('Promotion target: %s', pro_path)
+
+    var headers = {'destination':pro_path}
+    request({'method':'COPY', 'url':dev_url, 'headers':headers, 'json':true}, function(er, res) {
+      if(!er && res.statusCode == 201)
+        return self.log.info('Promoted staging %s to production %s', ddoc._rev, res.body.rev)
+
+      self.die(er || new Error('Response '+res.statusCode+' to copy: ' + JSON.stringify(res.body)))
+    })
+  })
 }
 
 
@@ -823,6 +853,9 @@ function attach_to_doc(atts, couch, db, id, callback) {
 // Utilities
 //
 
+function encID(id) {
+  return encodeURIComponent(id).replace(/^_design%2f/i, '_design/')
+}
 
 function handlebars_helpers() {
   var result = {}
