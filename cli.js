@@ -26,6 +26,8 @@ var OPTS = optimist.describe('prefix', 'Production hostname prefix')
                    .default('prefix', 'www.')
                    .describe('staging-prefix', 'Staging hostname prefix')
                    .default('staging-prefix', 'staging.')
+                   .describe('bounce-prefix', 'Prefix to bounce to production (e.g. "")')
+                   .default('bounce-prefix', null)
                    .describe('seed', 'Seed build data from a directory')
                    .describe('publish', 'Push website attachments from a directory')
                    .describe('ro', 'Make the site read-only except _admin and "editor" roles')
@@ -57,6 +59,8 @@ function main(argv) {
     site.production_prefix = argv.prefix || '' // I think Optimist turns "" into 0.
   if('staging-prefix' in argv)
     site.staging_prefix = argv['staging-prefix'] || ''
+  if('bounce-prefix' in argv)
+    site.bounce_prefix = argv['bounce-prefix'] || ''
 
   //if(argv.log)
   //  site.log.transports.console.level = argv.log

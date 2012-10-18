@@ -58,6 +58,7 @@ function Builder () {
 
   self.production_prefix = 'www.'
   self.staging_prefix    = 'staging.'
+  self.bounce_prefix     = null
 
   self.couch = null
   self.db    = null
@@ -175,9 +176,9 @@ Builder.prototype.prep_session = function() {
 Builder.prototype.set_config = function() {
   var self = this
 
-  var config = [ [ 'vhosts', self.staging_prefix    + self.hostname, '/'+self.db+'/_design/'+DEFS.staging   +'/_rewrite' ]
+  var config = [ [ 'httpd' , 'secure_rewrites', 'false' ]
+               , [ 'vhosts', self.staging_prefix    + self.hostname, '/'+self.db+'/_design/'+DEFS.staging   +'/_rewrite' ]
                , [ 'vhosts', self.production_prefix + self.hostname, '/'+self.db+'/_design/'+DEFS.production+'/_rewrite' ]
-               , [ 'httpd' , 'secure_rewrites'        , 'false'                                             ]
                ]
 
   async.forEach(config, set_config, configs_set)
@@ -237,6 +238,7 @@ Builder.prototype.ddoc = function() {
                       , 'namespace' : namespace
                       , 'production_prefix': self.production_prefix
                       , 'staging_prefix'   : self.staging_prefix
+                      , 'bounce_prefix'    : self.bounce_prefix
                       , 'hostname'         : self.hostname
                       }
 
@@ -249,6 +251,22 @@ Builder.prototype.ddoc = function() {
 
     doc.rewrites.push({'from':'', 'to':namespace})
     doc.rewrites.push({'from':'*', 'to':namespace+'/*'})
+
+    doc.shows = {}
+    doc.shows.bounce = "" + function(doc, req) {
+      log('Bounce: ' + JSON.stringify(req))
+      var production_domain = XXX_pro_XXX
+        , path = req.requested_path.join('/')
+        , loc = 'https://' + production_domain + '/' + path
+
+      log('Bounce to ' + loc)
+      return { 'code':301
+             , 'headers': {'location':loc}
+             , 'body': 'Moved to: ' + loc + '\r\n'
+             }
+    }
+
+    doc.shows.bounce = doc.shows.bounce.replace(/XXX_pro_XXX/g, JSON.stringify(self.production_prefix + self.hostname))
 
     if(! self.is_read_only)
       delete doc.validate_doc_update
@@ -426,14 +444,39 @@ Builder.prototype.copy_to_production = function(ddoc) {
     self.log.debug('Promotion target: %s', pro_path)
     var headers = {'destination':pro_path}
     request({'method':'COPY', 'url':dev_url, 'headers':headers, 'json':true}, function(er, res) {
-      if(!er && res.statusCode == 201)
-        return self.log.info('Promoted staging %s to production %s', ddoc._rev, res.body.rev)
+      if(er)
+        return self.die(er)
 
-      self.die(er || new Error('Response '+res.statusCode+' to copy: ' + JSON.stringify(res.body)))
+      if(res.statusCode != 201)
+        return self.die(new Error('Response '+res.statusCode+' to copy: ' + JSON.stringify(res.body)))
+
+      self.log.info('Promoted staging %s to production %s', ddoc._rev, res.body.rev)
+      self.configure_bounce()
     })
   })
 }
 
+
+Builder.prototype.configure_bounce = function() {
+  var self = this
+
+  if(typeof self.bounce_prefix != 'string')
+    return self.log.debug('No bounce prefix to set')
+
+  var domain = self.bounce_prefix + self.hostname
+    , cfg_url = self.couch + '/_config/vhosts/' + domain
+    , cfg_val = '/' + self.db + '/' + encID('_design/' + DEFS.production) + '/_show/bounce'
+
+  request.put({'url':cfg_url, 'json':cfg_val}, function(er, res) {
+    if(er)
+      return self.die(er)
+
+    if(res.statusCode != 200)
+      return self.die(new Error('Bad config response: ' + JSON.stringify(res.body)))
+
+    self.log.debug('Set bounce vhost: %s = %s', domain, cfg_val)
+  })
+}
 
 Builder.prototype.push = function() {
   var self = this
