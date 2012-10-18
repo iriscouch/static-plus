@@ -335,13 +335,11 @@ Builder.prototype.follow = function() {
 
   self.feed.on('change', function(change) {
     self.log.debug('Update %d: %s', change.seq, change.id)
-
-    var match = change.id.match(/^_design\//)
-    if(!match)
-      self.doc(change.doc)
+    self.doc(change.doc)
 
     // If this is the "catch-up" event, or if this is any document update after the catch-up, then publish.
-    if(self.caught_up == change.seq || (self.caught_up && !match))
+    var is_ddoc = !! change.id.match(/^_design\//)
+    if(self.caught_up == change.seq || (self.caught_up && !is_ddoc))
       self.push()
   })
 }
@@ -352,6 +350,16 @@ Builder.prototype.doc = function(doc) {
 
   if(doc._deleted)
     return self.log.warn('Ignore deleted doc', {'id':doc._id})
+
+  var match = doc._id.match(/^_design\/(.*)$/)
+  if(match) {
+    if(match[1] != DEFS.staging)
+      return self.log.debug('Ignore foreign ddoc: %j', doc._id)
+    else if(!doc.static_plus || !doc.static_plus.promote)
+      return self.log.debug('Ignore staging ddoc: %j', doc._id)
+    else
+      return self.promote(doc)
+  }
 
   self.docs[doc._id] = doc
 
@@ -365,6 +373,14 @@ Builder.prototype.doc = function(doc) {
     doc.path = doc.path.replace(/^\/*/, '')
     self.pages_queue[doc.path] = doc
   }
+}
+
+
+Builder.prototype.promote = function(ddoc) {
+  var self = this
+
+  self.log.info('Staging ddoc requests promotion: %j', ddoc._id)
+  self.log.debug('static_;lus: %j', ddoc.static_plus)
 }
 
 
