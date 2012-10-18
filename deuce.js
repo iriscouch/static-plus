@@ -385,24 +385,19 @@ Builder.prototype.promote = function(ddoc) {
     , dev_url = self.couch + '/' + self.db + '/' + encID(ddoc._id) + '?rev' + ddoc._rev
 
   self.log.debug('Promotion source: %s', dev_url)
-  request({'url':pro_url, 'json':true}, function(er, res) {
+  request({'method':'HEAD', 'url':pro_url}, function(er, res) {
     if(er)
       return self.die(er)
 
-    var rev = null
+    var pro_path = pro_id
     if(res.statusCode == 404)
       self.log.debug('Create new production ddoc')
     else if(res.statusCode != 200)
       return self.die(new Error('Bad response for production ddoc: ' + JSON.stringify(res.body)))
     else
-      rev = res.body._rev
-
-    var pro_path = pro_id
-    if(rev)
-      pro_path += '?rev=' + rev
+      pro_path += '?rev=' + JSON.parse(res.headers.etag)
 
     self.log.debug('Promotion target: %s', pro_path)
-
     var headers = {'destination':pro_path}
     request({'method':'COPY', 'url':dev_url, 'headers':headers, 'json':true}, function(er, res) {
       if(!er && res.statusCode == 201)
