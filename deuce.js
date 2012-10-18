@@ -379,7 +379,33 @@ Builder.prototype.doc = function(doc) {
 Builder.prototype.promote = function(ddoc) {
   var self = this
 
-  self.log.info('Promote to production: %s %s', ddoc._id, ddoc._rev)
+  // Set a timestamp of this promotion and copy if that works.
+  self.log.debug('Staging ddoc requests promotion: %j', ddoc._id)
+  txn({'couch':self.couch, 'db':self.db, 'id':ddoc._id}, mark_promoted, promote_marked)
+
+  function mark_promoted(doc, to_txn) {
+    doc.static_plus = doc.static_plus || {}
+    doc.static_plus.promoted_at = new Date
+    delete doc.static_plus.promote
+
+    self.log.debug('Mark promotion at %j', doc.static_plus.promoted_at)
+    return to_txn()
+  }
+
+  function promote_marked(er, new_ddoc) {
+    if(er)
+      return self.die(er)
+
+    self.log.debug('Flagged ddoc for promotion: %s %s', new_ddoc._id, new_ddoc._rev)
+    self.copy_to_production(new_ddoc)
+  }
+}
+
+
+Builder.prototype.copy_to_production = function(ddoc) {
+  var self = this
+
+  self.log.debug('Promote to production: %s %s', ddoc._id, ddoc._rev)
   var pro_id = '_design/' + DEFS.production
     , pro_url = self.couch + '/' + self.db + '/' + encID(pro_id)
     , dev_url = self.couch + '/' + self.db + '/' + encID(ddoc._id) + '?rev' + ddoc._rev
