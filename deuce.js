@@ -759,6 +759,8 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
     function change(ev, name) {
       if(ev != 'change')
         return self.log.debug('Ignore event: %s %s', ev, name)
+      else
+        self.log.debug('Watch event %j: %j', ev, name)
 
       delete atts[name]
       prep_file(name, function(er) {
