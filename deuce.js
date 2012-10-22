@@ -254,7 +254,6 @@ Builder.prototype.ddoc = function() {
 
     doc.shows = {}
     doc.shows.bounce = "" + function(doc, req) {
-      log('Bounce: ' + JSON.stringify(req))
       var production_domain = XXX_pro_XXX
         , path = req.requested_path.join('/')
         , loc = 'https://' + production_domain + '/' + path
