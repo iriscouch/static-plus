@@ -366,7 +366,7 @@ Builder.prototype.doc = function(doc) {
   var self = this
 
   if(doc._deleted)
-    return self.log.warn('Ignore deleted doc', {'id':doc._id})
+    return self.log.debug('Ignore deleted doc', {'id':doc._id})
 
   var match = doc._id.match(/^_design\/(.*)$/)
   if(match) {
