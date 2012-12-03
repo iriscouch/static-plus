@@ -372,7 +372,7 @@ Builder.prototype.doc = function(doc) {
   if(match) {
     if(match[1] != DEFS.staging)
       return self.log.debug('Ignore foreign ddoc: %j', doc._id)
-    else if(!doc.static_plus || !doc.static_plus.promote)
+    else if(!doc.static_plus || (!doc.promote && !doc.static_plus.promote))
       return self.log.debug('Ignore staging ddoc: %j', doc._id)
     else
       return self.promote(doc)
@@ -404,6 +404,7 @@ Builder.prototype.promote = function(ddoc) {
     doc.static_plus = doc.static_plus || {}
     doc.static_plus.promoted_at = new Date
     delete doc.static_plus.promote
+    delete doc.promote
 
     self.log.debug('Mark promotion at %j', doc.static_plus.promoted_at)
     return to_txn()
