@@ -787,7 +787,7 @@ function dir_to_attachments(dir, is_watcher, prefix, callback) {
     async.forEach(res, prep_file, files_prepped)
 
     function prep_file(name, to_async) {
-      var match = name.match(/\.(js|html|css|less|eot|svg|ttf|woff|jpg|jpeg)$/i)
+      var match = name.match(/\.(js|html|css|less|eot|svg|ttf|woff|jpg|jpeg|ico)$/i)
         , extension = match && match[1]
         , type = match && mime.lookup(extension)
 
