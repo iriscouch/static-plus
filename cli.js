@@ -18,6 +18,13 @@ var fs = require('fs')
 var URL = require('url')
 var util = require('util')
 var optimist = require('optimist')
+var log4js = require('log4js');
+log4js.configure({
+  appenders: [
+      { type: "console" }
+  ],
+  replaceConsole: true
+});
 
 //var sp = require('./api')
 var Deuce = require('./deuce')
